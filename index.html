@@ -283,6 +283,13 @@ input[type=file]{padding:6px}
 .auth-who{font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .auth-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;max-width:440px;justify-self:end}
 .auth-panel .row{display:flex;gap:8px;flex-wrap:wrap}.auth-panel input{flex:1;min-width:200px}
+body.vm-mobile #netBtn{display:none!important}
+.pd-today .d-row,.pd-today2 .d-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pd-today2{display:grid;gap:6px}.pd-today2 .d{font:700 20px var(--f-body);color:var(--ink)}
+.pd-today2 #authBtn2{margin-left:auto}
+.pd-today2 .w-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.pd-today2 .w{font-size:12.5px;color:var(--muted)}
+body.vm-mobile header .auth{display:none!important}
+#netBtn2{padding:4px 11px;font-size:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -377,6 +384,7 @@ input[type=file]{padding:6px}
     <div class="actions">
       <button class="btn primary" id="saveBtn">Save reading</button>
       <button class="btn" id="clearBtn">Clear form</button>
+      <button class="btn rpt-back" id="entryBack" type="button" aria-label="Back to the previous page">← Back</button>
       <span class="msg" id="saveMsg"></span>
     </div>
   </section>
@@ -389,6 +397,7 @@ input[type=file]{padding:6px}
       <button class="btn sm" id="impBtn" style="min-height:38px" aria-expanded="false" aria-controls="impPanel">Import CSV</button>
       <button class="btn sm" id="bkHist" style="min-height:38px" title="Create a fresh backup copy in Google Drive">Back up</button>
       <button class="btn sm primary" id="rptBtn" style="min-height:38px" aria-expanded="false" aria-controls="rptPanel">Generate Report</button>
+      <button class="btn sm rpt-back" id="histBack" type="button" style="min-height:38px" aria-label="Back to the previous page">← Back</button>
       <span class="msg" id="csvMsg"></span>
     </div>
     <div class="rpt-wrap" id="rptPanel" hidden>
@@ -445,6 +454,7 @@ input[type=file]{padding:6px}
       <div class="field" id="t_fromF" hidden><label for="t_from">From (dd/mm/yyyy)</label><input type="text" id="t_from" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" style="width:140px"></div>
       <div class="field" id="t_toF" hidden><label for="t_to">To (dd/mm/yyyy)</label><input type="text" id="t_to" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" style="width:140px"></div>
       <button class="btn sm primary" id="trPdf" type="button" style="min-height:38px;align-self:flex-end">Create PDF</button>
+      <button class="btn sm rpt-back" id="trendsBack" type="button" style="min-height:38px;align-self:flex-end" aria-label="Back to the previous page">← Back</button>
       <span class="msg" id="trMsg" style="align-self:center"></span>
     </div>
     <div class="rpt-wrap" id="trPrev" hidden>
@@ -456,7 +466,7 @@ input[type=file]{padding:6px}
 
   <!-- CALIBRATION -->
   <section id="pane-calib" role="tabpanel" hidden style="display:grid;gap:12px">
-    <div class="actions"><button class="btn primary sm" id="calAdd" type="button">Add instrument</button><span class="msg" id="calMsg"></span></div>
+    <div class="actions"><button class="btn primary sm" id="calAdd" type="button">Add instrument</button><button class="btn sm rpt-back" id="calBack" type="button" aria-label="Back to the previous page">← Back</button><span class="msg" id="calMsg"></span></div>
     <div class="imp" id="calForm" hidden>
       <div class="imp-h"><h2 id="calFormTitle">Add instrument</h2><span class="sub">Next due uses the recalibration date on the certificate; if blank, last calibration date + interval.</span></div>
       <div class="cal-grid">
@@ -507,6 +517,7 @@ input[type=file]{padding:6px}
 
   <!-- CONTACT -->
   <section id="pane-contact" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="actions"><button class="btn sm rpt-back" id="contactBack" type="button" aria-label="Back to the previous page">← Back</button></div>
     <div class="contacts">
       <div class="ct-card">
         <div class="ct-role">Equipment Calibration</div>
@@ -531,6 +542,7 @@ input[type=file]{padding:6px}
 
   <!-- LIMITS -->
   <section id="pane-limits" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="actions"><button class="btn sm rpt-back" id="limitsBack" type="button" aria-label="Back to the previous page">← Back</button></div>
     <p class="note"><b>This IETS complies with Standard B</b> of the Environmental Quality (Industrial Effluent) Regulations 2009, Fifth Schedule: final discharge COD ≤ 200 mg/L, TSS ≤ 100 mg/L, pH 5.5 – 9.0. If your DOE licence sets tighter values, adjust them below. Process targets for influent and aeration are internal operating ranges. Amber shows when a reading reaches the warning % of a maximum limit.</p>
     <div class="imp" id="compPanel">
       <div class="imp-h"><h2>Standard B compliance – latest readings</h2><span class="sub" id="compSub"></span></div>
@@ -689,6 +701,7 @@ function updateNet(){
   const on=navigator.onLine!==false&&dbOk;const b=$("#netBtn");
   b.className="net "+(on?"on":"off");$("#netTxt").textContent=on?"Online":"Offline";
   b.title=on?"Connected to the shared log. Readings save for everyone.":(navigator.onLine===false?"No internet connection on this device.":"Not connected to the shared log. Readings can't be saved right now.");
+  {const b2=$("#netBtn2");if(b2){b2.className=b.className;b2.lastChild.textContent=$("#netTxt").textContent;b2.title=b.title}}
   if(netDetail)$("#connState").textContent=b.title;
 }
 
@@ -1210,7 +1223,7 @@ function renderLimits(){
 function fillLimits(){
   $("#lim_warn").value=LIM.warnPct??80;
   for(const L of LIMIT_KEYS){const v=LIM[L.k]||{};if(L.kind==="range")$("#lim_"+L.k+"_min").value=v.min??"";$("#lim_"+L.k+"_max").value=v.max??"";}
-  const ro=!canAdmin;document.querySelectorAll("#pane-limits input,#pane-limits .btn").forEach(e=>e.disabled=ro);
+  const ro=!canAdmin;document.querySelectorAll("#pane-limits input,#pane-limits .btn:not(.rpt-back)").forEach(e=>e.disabled=ro);
   $("#limRole").textContent=ro?"Only the owner can change limits.":(LIM.standard==="B"?"Compliance standard: Standard B":"Compliance standard: custom limits");
 }
 function readLimits(){
@@ -1224,7 +1237,9 @@ function applyPreset(s){
 }
 
 /* ---------- tabs ---------- */
+let curTab=null,backTo=null,histFrom=null,trendsFrom=null,calFrom=null,tabFrom={};
 function selectTab(t){
+  {const nt=(t==="dash"&&!isPhone())?"entry":t;if(nt==="entry"&&curTab&&curTab!=="entry")backTo={tab:curTab,y:window.scrollY};if(nt==="history"&&curTab&&curTab!=="history")histFrom={tab:curTab,y:window.scrollY};if(nt==="trends"&&curTab&&curTab!=="trends")trendsFrom={tab:curTab,y:window.scrollY};if(nt==="calib"&&curTab&&curTab!=="calib")calFrom={tab:curTab,y:window.scrollY};if((nt==="limits"||nt==="contact")&&curTab&&curTab!==nt)tabFrom[nt]={tab:curTab,y:window.scrollY};curTab=nt;}
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
   if(t==="dash"&&!isPhone())t="entry";
   ["dash","entry","history","trends","limits","calib","settings","contact"].forEach(x=>{$("#pane-"+x).hidden=x!==t});
@@ -1434,11 +1449,16 @@ function renderDash(){
   const td=isoToday(),rec=LOGS.get(td),now=new Date();
   const c1=el("div",{class:"pd-card"});
   const pill=rec?el("span",{class:"pill ok",text:"Saved"+(rec.time?" "+rec.time:"")+(rec.recordedBy?" · "+rec.recordedBy:"")}):el("span",{class:"pill warn",text:"Not recorded yet"});
-  c1.append(el("div",{class:"pd-today"},el("div",{},el("div",{class:"d",text:dmy(td)}),el("div",{class:"w",text:now.toLocaleDateString("en-GB",{weekday:"long"})+" · today's reading"})),pill));
+  const nb2=el("button",{type:"button",class:"net",id:"netBtn2","aria-live":"polite"},el("span",{class:"dot"}),el("span",{text:"Offline"}));nb2.addEventListener("click",()=>$("#netBtn").click());
+  const ab2=el("button",{type:"button",class:"auth-btn",id:"authBtn2",text:$("#authBtn").textContent,title:$("#authWho").textContent||"Sign in to record readings"});
+  ab2.addEventListener("click",()=>{$("#authBtn").click();if(!$("#authPanel").hidden)window.scrollTo({top:0,behavior:"smooth"})});
+  c1.append(el("div",{class:"pd-today2"},
+    el("div",{class:"d-row"},el("div",{class:"d",text:dmy(td)}),nb2,ab2),
+    el("div",{class:"w-row"},el("div",{class:"w",text:now.toLocaleDateString("en-GB",{weekday:"long"})+" · today's reading"+($("#authWho").textContent?" · "+$("#authWho").textContent:"")}),pill)));
   const cta=el("button",{type:"button",class:"btn primary pd-cta",text:rec?"Edit today's reading":"Add today's reading"});
   cta.addEventListener("click",()=>{$("#f_date").value=td;fillForm(td);selectTab("entry");window.scrollTo(0,0)});c1.append(cta);
   {const sa=el("a",{class:"sync",id:"syncStat3",target:"_blank",rel:"noopener"},el("span",{class:"dot"}),el("span",{id:"syncTxt3",text:"Google Sheet not synced"}));c1.append(el("div",{class:"pd-sync"},sa));setSyncOne(autoBusy?"busy":"",sa,sa.lastChild);}
-  host.append(c1);
+  host.append(c1);updateNet();
   // 2. Final discharge vs Standard B
   const c2=card("Final discharge · Standard B","limits","Compliance");const B=STD.B;let worst="none";const rank={none:0,ok:1,warn:2,bad:3};
   const tiles=el("div",{class:"pd-tiles"});const wp=(LIM.warnPct||80)/100;
@@ -1930,6 +1950,11 @@ $("#netBtn").addEventListener("click",()=>{if(db&&db.refresh&&!dbOk)db.refresh()
 window.addEventListener("online",updateNet);window.addEventListener("offline",updateNet);
 updateNet();
 setInterval(()=>{const d=LOGS.get($("#f_date").value);if(!d||!d.time)$("#f_time").value=nowHM()},20000);
+["limits","contact"].forEach(k=>$("#"+k+"Back").addEventListener("click",()=>{const b=tabFrom[k];tabFrom[k]=null;const t=b&&b.tab?b.tab:(isPhone()?"dash":"entry");selectTab(t);setTimeout(()=>window.scrollTo({top:b?b.y:0,behavior:"smooth"}),0)}));
+$("#calBack").addEventListener("click",()=>{const b=calFrom;calFrom=null;$("#calForm").hidden=true;const t=b&&b.tab?b.tab:(isPhone()?"dash":"entry");selectTab(t);setTimeout(()=>window.scrollTo({top:b?b.y:0,behavior:"smooth"}),0)});
+$("#trendsBack").addEventListener("click",()=>{const b=trendsFrom;trendsFrom=null;if(!$("#trPrev").hidden)trHidePrev();const t=b&&b.tab?b.tab:(isPhone()?"dash":"entry");selectTab(t);setTimeout(()=>window.scrollTo({top:b?b.y:0,behavior:"smooth"}),0)});
+$("#histBack").addEventListener("click",()=>{const b=histFrom;histFrom=null;if(!$("#rptPanel").hidden){$("#rptPanel").hidden=true;$("#rptBtn").setAttribute("aria-expanded","false")}const t=b&&b.tab?b.tab:(isPhone()?"dash":"entry");selectTab(t);setTimeout(()=>window.scrollTo({top:b?b.y:0,behavior:"smooth"}),0)});
+$("#entryBack").addEventListener("click",()=>{const b=backTo;backTo=null;const t=b&&b.tab?b.tab:(isPhone()?"dash":"history");selectTab(t);setTimeout(()=>window.scrollTo({top:b?b.y:0,behavior:"smooth"}),0)});
 $("#clearBtn").addEventListener("click",()=>{P.forEach(p=>{if(!p.calc)$("#f_"+p.k).value=""});$("#f_time").value=(LOGS.get($("#f_date").value)||{}).time||nowHM();$("#f_rem").value="";$("#f_note").value="";$("#f_chk").value="";dirty=false;refreshPills();$("#saveMsg").textContent=""});
 $("#h_month").addEventListener("change",renderHistory);
 $("#t_range").addEventListener("change",()=>{const c=$("#t_range").value==="custom";$("#t_fromF").hidden=$("#t_toF").hidden=!c;
