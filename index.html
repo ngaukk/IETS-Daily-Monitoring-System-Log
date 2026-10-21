@@ -1,0 +1,2013 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html,body{margin:0;padding:0}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>IETS and Water Meter Daily Log</title>
+<style>
+/* Layout: plant-logbook — status strip on top, four process stages laid out in flow order (Influent → Clarifier → Aeration → Discharge), tabs for log / history / trends / limits */
+:root{
+  --bg:#f3f6f5; --panel:#ffffff; --ink:#152320; --muted:#5b6d69; --line:#d6e0dd; --soft:#e8efed;
+  --accent:#0d6e63; --accent-ink:#ffffff; --accent-soft:#d5ebe6;
+  --ok:#1f7a3a; --ok-bg:#dcf1e1; --warn:#9a6300; --warn-bg:#fbedcf; --bad:#b3261e; --bad-bg:#fadcd8;
+  --chart:#0d6e63; --limit:#b3261e; --title:#0b6bcb; --sel:#e01e1e;
+  --f-display:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-body:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-data:Arial,"Helvetica Neue",Helvetica,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1614; --panel:#15201e; --ink:#e3ecea; --muted:#93a8a3; --line:#2a3a37; --soft:#1c2a27;
+  --accent:#4cc2b0; --accent-ink:#06201c; --accent-soft:#1d3a35;
+  --ok:#6fd38a; --ok-bg:#163423; --warn:#f0b956; --warn-bg:#3a2d12; --bad:#ff8a80; --bad-bg:#3d1916;
+  --chart:#4cc2b0; --limit:#ff8a80; --title:#4da3ff; --sel:#ff5252; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1614; --panel:#15201e; --ink:#e3ecea; --muted:#93a8a3; --line:#2a3a37; --soft:#1c2a27;
+  --accent:#4cc2b0; --accent-ink:#06201c; --accent-soft:#1d3a35;
+  --ok:#6fd38a; --ok-bg:#163423; --warn:#f0b956; --warn-bg:#3a2d12; --bad:#ff8a80; --bad-bg:#3d1916;
+  --chart:#4cc2b0; --limit:#ff8a80; --title:#4da3ff; --sel:#ff5252; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.hstat{margin-left:auto;align-self:flex-start;display:grid;justify-items:end;gap:4px;text-align:right}
+/* ===== PHONE MODE ===== */
+.bnav,.more-sheet,#pane-dash{display:none}
+body.vm-mobile{font-size:15px}
+body.vm-mobile .wrap{max-width:560px;gap:14px;padding-block:12px 104px}
+body.vm-mobile nav.tabs,body.vm-mobile .strip{display:none}
+body.vm-mobile #pane-dash:not([hidden]){display:grid}
+body.vm-mobile input,body.vm-mobile select,body.vm-mobile textarea{font-size:16px;min-height:44px}
+body.vm-mobile .btn{min-height:42px}
+body.vm-mobile .stage{padding:14px 12px}
+body.vm-mobile .entry-bar .field{flex:1 1 100%}
+body.vm-mobile #saveBtn{width:100%;min-height:50px;font-size:16px}
+body.vm-mobile .actions{gap:8px}
+body.vm-mobile .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:6px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px));box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.bnav button{flex:1;appearance:none;border:0;background:none;border-radius:10px;padding:4px 2px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:600 11px var(--f-body);color:var(--muted);cursor:pointer}
+.bnav button .ic{font-size:20px;line-height:1}
+.bnav button.on{color:var(--title);background:var(--soft)}
+body.vm-mobile .more-sheet:not([hidden]){display:grid;position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:21;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:8px;gap:4px;grid-template-columns:1fr 1fr}
+.more-sheet button{appearance:none;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:14px 10px;font:600 14px var(--f-body);color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px}
+.more-sheet button.on{border-color:var(--title);color:var(--title)}
+.pd{display:grid;gap:12px}
+.pd-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.pd-card.tap{cursor:pointer}
+.pd-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pd-h h3{margin:0;font:700 15px var(--f-body);color:var(--ink)}
+.pd-h .go{font-size:12px;color:var(--title);font-weight:600}
+.pd-today{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pd-today .d{font:700 20px var(--f-body);color:var(--ink)}
+.pd-today .w{font-size:12.5px;color:var(--muted)}
+.pd-cta{width:100%;min-height:50px;font-size:16px}
+.pd-sync{display:flex;justify-content:flex-end}.pd-sync .sync{margin:0}
+.pd-verdict{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.pd-verdict.ok{color:var(--ok)} .pd-verdict.warn{color:var(--warn)} .pd-verdict.bad{color:var(--bad)} .pd-verdict.none{color:var(--muted)}
+.pd-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pd-tile{background:var(--bg);border-radius:10px;padding:10px 8px;display:grid;gap:4px;text-align:center;min-width:0}
+.pd-tile .l{font-size:11.5px;color:var(--muted);font-weight:600}
+.pd-tile .v{font:800 22px var(--f-body);color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.pd-tile .v.ok{color:var(--ok)} .pd-tile .v.warn{color:var(--warn)} .pd-tile .v.bad{color:var(--bad)}
+.pd-tile .u{font-size:11px;color:var(--muted)}
+.pd-bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
+.pd-bar i{display:block;height:100%;border-radius:99px;background:var(--ok)}
+.pd-bar.warn i{background:var(--warn)} .pd-bar.bad i{background:var(--bad)}
+.pd-row{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.pd-row:last-child{border-bottom:0}
+.pd-row span:first-child{color:var(--muted)} .pd-row b{font-variant-numeric:tabular-nums}
+.pd-row b.ok{color:var(--ok)} .pd-row b.warn{color:var(--warn)} .pd-row b.bad{color:var(--bad)}
+.pd-pond{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}
+.pd-tank{position:relative;height:96px;border:2px solid var(--line);border-top:0;border-radius:0 0 10px 10px;overflow:hidden;background:var(--bg)}
+.pd-tank i{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--title) 55%,transparent)}
+.pd-tank i.warn{background:color-mix(in srgb,var(--warn) 70%,transparent)}
+.pd-tank b{position:absolute;left:0;right:0;top:4px;text-align:center;font-size:11px;color:var(--ink)}
+.pd-big{font:800 26px var(--f-body);color:var(--ink);font-variant-numeric:tabular-nums}
+.pd-big small{font-size:13px;font-weight:600;color:var(--muted)}
+.pd-grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:440px){.pd-grid2{grid-template-columns:1fr}}
+.stages.s3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sec-pick select{font-weight:600;color:var(--title);min-width:220px}
+body.vm-mobile .sec-pick{flex:1 1 100%}
+body.vm-mobile .sec-pick select{font-size:16px;min-height:48px;border:2px solid var(--title);background:var(--panel)}
+.entry-sheet .es-h{grid-column:1/-1;font:700 13px var(--f-body);color:var(--muted);padding:4px 6px}
+.entry-sheet button[data-sec=all]{display:none}
+.entry-sheet button.on{border-color:var(--title);color:var(--title);background:var(--panel)}
+@media (max-width:760px){.stages.s3{grid-template-columns:1fr}}
+body.vm-mobile .stages.s3{grid-template-columns:1fr}
+.stock-info{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:-4px}
+.inv-extra{display:flex;gap:12px;flex-wrap:wrap;padding:0 2px}.inv-extra .field{min-width:220px;flex:0 1 320px}
+.inv-note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.rpt-top{display:flex;justify-content:flex-start}
+.rpt-back{font-weight:700;color:var(--title);border-color:color-mix(in srgb,var(--title) 45%,var(--line))}
+body.vm-mobile .rpt-back{min-height:44px;padding:8px 16px;font-size:15px}
+.rpt-wrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
+.rpt-paper{overflow-x:auto;background:#ffffff;border:1px solid #c9d1d3;border-radius:6px;padding:14px;color:#111111}
+.cam-btn{appearance:none;display:inline-flex;align-items:center;gap:7px;border:1px solid color-mix(in srgb,var(--title) 45%,var(--line));background:var(--panel);color:var(--title);border-radius:8px;padding:8px 12px;font:600 13px var(--f-body);cursor:pointer;min-height:38px;align-self:flex-end}
+.cam-btn:hover{background:var(--soft)} .cam-btn:disabled{opacity:.5;cursor:default}
+.cam-panel{border-color:color-mix(in srgb,var(--title) 40%,var(--line))}
+.cam-body{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:start}
+.cam-body img{width:120px;max-width:100%;border-radius:8px;border:1px solid var(--line);object-fit:cover;aspect-ratio:3/4;background:var(--soft)}
+.cam-out{display:grid;gap:8px;min-width:0}
+#camCsv{font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre;min-height:90px}
+.cam-tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.cam-tbl table{font-size:12px}.cam-tbl th,.cam-tbl td{padding:5px 8px;text-align:center}
+@media (max-width:520px){.cam-body{grid-template-columns:1fr}.cam-body img{width:96px}}
+body.vm-mobile .entry-bar .cam-btn{flex:1 1 100%;justify-content:center;min-height:46px;font-size:15px}
+.hs-row{display:flex;align-items:center;gap:8px}
+.vm{height:44px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.vm button{appearance:none;font-size:11px;line-height:1;padding:2px 5px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;opacity:.6}
+.vm button.on{opacity:1;border-color:var(--title);box-shadow:0 0 0 1px var(--title)}
+body.vm-mobile .wrap{max-width:560px}
+body.vm-mobile .stages,body.vm-mobile .stages.s2,body.vm-mobile .charts,body.vm-mobile .contacts,body.vm-mobile .cal-grid,body.vm-mobile .imp-src,body.vm-mobile .foot,body.vm-mobile .lim-grid{grid-template-columns:1fr}
+body.vm-mobile .cal-det{grid-template-columns:1fr}
+.net{appearance:none;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 13px;font:600 13px var(--f-body);cursor:pointer;border:1px solid currentColor;background:var(--panel)}
+.net.on{color:var(--ok);background:var(--ok-bg)} .net.off{color:var(--bad);background:var(--bad-bg)}
+.net.on .dot{box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.hrow{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 10px;min-width:0}
+.logo{height:44px;width:auto;flex:none}
+.co{min-width:0;height:44px;display:flex;flex-direction:column;justify-content:center;font-weight:700;color:var(--ink)}
+.c1{font-size:clamp(12px,calc((100vw - 92px)/20.5),17px);line-height:24px}
+.fac{font-size:clamp(9px,calc((100vw - 92px)/27.5),12px);font-weight:600;color:var(--muted);line-height:20px}
+header.top h1{margin:0;font:700 clamp(13px,calc((100vw - 92px)/19),18px)/1.25 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:normal;text-wrap:wrap;color:var(--title);grid-column:2;grid-row:2}
+.eyebrow{font:600 11px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(26px,4vw,34px)/1.05 var(--f-display);font-stretch:80%;margin:6px 0 0;letter-spacing:-.01em;text-wrap:balance}
+h2{font:700 18px/1.2 var(--f-display);font-stretch:85%;margin:0}
+.sub{color:var(--muted);font-size:13px}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+/* status strip */
+.strip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px}
+.strip-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.verdict{font:700 15px var(--f-display);font-stretch:85%;display:flex;align-items:center;gap:8px}
+.comp-tbl td,.comp-tbl th{text-align:center;vertical-align:middle}
+.comp-tbl td.l,.comp-tbl th.l{text-align:left}
+.meter{position:relative;height:8px;border-radius:99px;background:var(--soft);min-width:120px;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.meter.ok i{background:var(--ok)} .meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
+.comp-verdict{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:10px}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+#calBody th,#calBody td{text-align:center;vertical-align:middle}
+.cal-name{appearance:none;border:0;background:none;padding:0;font:600 13px var(--f-body);color:var(--title);cursor:pointer;text-align:left}
+.cal-name:hover{text-decoration:underline}
+.pill.none{background:var(--soft);color:var(--muted)}
+tr.sub-row td{background:var(--soft);text-align:left!important;white-space:normal}
+.inline-form{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.inline-form .field{min-width:130px;flex:1}
+.hist-list{display:grid;gap:4px;font-size:12.5px}
+.hist-list div{display:flex;flex-wrap:wrap;gap:4px 12px}
+.cal-det{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 18px;font-size:12.5px}
+.cal-det div{display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);min-width:0}
+.cal-det .k{color:var(--muted);flex:0 0 120px}.cal-det .v{color:var(--ink);font-weight:600;min-width:0;overflow-wrap:anywhere}
+#calBody td .sub{font-size:11.5px}
+.act .rec{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
+.contacts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.ct-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:8px;align-content:start}
+.ct-role{font:600 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.ct-card h2{font-size:17px}
+.ct-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.ct-row .k{color:var(--muted);width:52px}
+.ct-row .v{font-weight:700;color:var(--ink);user-select:all}
+.ct-tel{color:var(--title)!important;text-decoration:none;font-size:16px;font-variant-numeric:tabular-nums}
+.ct-tel:hover{text-decoration:underline}
+.ct-copy{padding:4px 10px;font-size:12px}
+.set-status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.set-status .sync{margin-left:0}
+#pane-settings a,#csvMsg a{color:var(--title);font-weight:600}
+.strip-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.strip-row .chips{flex:1 1 auto;min-width:0}
+.sync{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--muted);text-decoration:none;border-radius:999px;padding:4px 10px;background:var(--soft)}
+.sync[href]{cursor:pointer} .sync[href]:hover{text-decoration:underline}
+.sync.ok{color:var(--ok);background:var(--ok-bg)} .sync.warn{color:var(--warn);background:var(--warn-bg)} .sync.busy{color:var(--title)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:12.5px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.chip b{font-family:var(--f-data);font-weight:600}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+/* tabs */
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{appearance:none;border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* entry */
+.entry-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:grid;gap:4px;min-width:0}
+.field label,.lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+textarea{min-height:64px;resize:vertical}
+.form-blocks{display:grid;gap:14px}
+.block{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--soft);display:grid;gap:10px;min-width:0}
+.block-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:0 2px}
+.block-h h2{font-size:20px;color:var(--accent);letter-spacing:.02em}
+.stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stages.s2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:561px){body:not(.vm-mobile) .stages.s2{grid-auto-flow:column;grid-template-rows:auto auto}}
+@media (max-width:980px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.stages,.stages.s2{grid-template-columns:1fr}}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:12px;align-content:start;min-width:0}
+.stage-h{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.stage-h .step{font:600 11px var(--f-data);color:var(--accent);letter-spacing:.06em}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center}
+.prow label{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--ink)}
+.prow label .u{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.pill{font:600 11px var(--f-data);border-radius:5px;padding:3px 7px;white-space:nowrap;min-width:52px;text-align:center;background:var(--soft);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+.hint{grid-column:1/-1;font-size:11.5px;color:var(--muted)}
+.derived{border-top:1px dashed var(--line);padding-top:10px;display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
+.derived div{display:flex;justify-content:space-between;gap:8px}
+.derived b{color:var(--ink);font-family:var(--f-data);font-weight:600}
+.foot{display:grid;grid-template-columns:1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+@media (max-width:700px){.foot{grid-template-columns:1fr}}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 14px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:13px}
+.msg{font-size:13px;color:var(--muted)} .msg.err{color:var(--bad)} .msg.good{color:var(--ok)}
+.note{font-size:12.5px;color:var(--muted);max-width:75ch}
+/* history */
+.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;font-size:13px;min-width:100%}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--soft);position:sticky;top:0}
+th.grp{text-align:center;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-size:10.5px}
+td{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+td.l,th.l{text-align:left}
+td.ok{color:var(--ok)} td.warn{background:var(--warn-bg);color:var(--warn)} td.bad{background:var(--bad-bg);color:var(--bad);font-weight:600}
+tr.clickable{cursor:pointer} tr.clickable:hover td{background:var(--soft)}
+.act{display:inline-flex;gap:6px;align-items:center;justify-content:center;flex-wrap:nowrap}
+.act button{appearance:none;font:600 12px var(--f-body);border-radius:6px;padding:5px 10px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.act .ed{padding:4px 8px;line-height:0;color:var(--title);border-color:color-mix(in srgb,var(--title) 40%,var(--line))}
+.act .del{font-size:13px;padding:5px 9px;line-height:1;color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.act .yes{background:var(--bad);border-color:var(--bad);color:#fff}
+.act button:hover{filter:brightness(.97)} .act button:disabled{opacity:.5;cursor:default}
+.act .q{font:600 12px var(--f-body);color:var(--bad);white-space:nowrap}
+tr.flash td{background:var(--bad-bg)!important}
+td.rem{font-family:var(--f-body);text-align:left;white-space:normal;min-width:180px;max-width:320px;color:var(--muted)}
+/* trends */
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+@media (max-width:400px){.charts{grid-template-columns:1fr}}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 12px 6px;min-width:0}
+.chart-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.chart-h .t{font-weight:700;font-size:13.5px}
+.chart-h .v{font:600 13px var(--f-data)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font:10px var(--f-data)}
+.chart svg .hit{cursor:pointer}
+.chart svg .tip text{font-weight:700}
+.chart-sel{font-size:12px;color:var(--muted);min-height:16px;padding-top:2px}
+.chart-sel b{color:var(--sel)}
+/* limits */
+.lim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.lim{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px}
+.lim .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#histBody th,#histBody td,#histBody td.l,#histBody th.l,#histBody td.rem{text-align:center;vertical-align:middle}
+.subtabs{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--soft);border:1px solid var(--line);border-radius:10px;justify-self:start;max-width:100%}
+.subtabs button{appearance:none;border:0;background:none;color:var(--muted);font:600 13.5px var(--f-body);padding:8px 14px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.subtabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.imp{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
+.imp-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.imp-src{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px}
+@media (max-width:700px){.imp-src{grid-template-columns:1fr}}
+.imp-opt{border:1px dashed var(--line);border-radius:8px;padding:12px;display:grid;gap:8px;align-content:start;min-width:0}
+.imp-row{display:flex;gap:8px;flex-wrap:wrap}.imp-row input{flex:1;min-width:180px}
+input[type=file]{padding:6px}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:28px 20px;text-align:center;color:var(--muted)}
+.empty b{color:var(--ink);display:block;font-size:15px;margin-bottom:4px}
+/* Public website version: Google and Claude-only features removed */
+#syncStat,#bkHist,#rptDrive,#impCloud,#camBtn,#camBtn2,#camPanel,#tab-settings,#moreSheet [data-go="settings"],.pd-sync{display:none!important}
+.imp-src{grid-template-columns:1fr!important}
+.auth{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.auth-btn{appearance:none;border:1px solid color-mix(in srgb,var(--title) 45%,var(--line));background:var(--panel);color:var(--title);border-radius:999px;padding:6px 13px;font:600 13px var(--f-body);cursor:pointer}
+.auth-who{font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;max-width:440px;justify-self:end}
+.auth-panel .row{display:flex;gap:8px;flex-wrap:wrap}.auth-panel input{flex:1;min-width:200px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="hrow">
+      <img class="logo" src="data:image/gif;base64,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" alt="Lam Soon">
+      <div class="co"><div class="c1">LAM SOON EDIBLE OILS SDN.BHD.</div><div class="fac">(TELOK PANGLIMA GARANG FACTORY)</div></div>
+      <h1>IETS and Water Meter Daily Log</h1>
+    </div>
+    <div class="hstat">
+      <div class="hs-row">
+        <button type="button" class="net off" id="netBtn" aria-live="polite"><span class="dot"></span><span id="netTxt">Offline</span></button>
+        <div class="vm" role="group" aria-label="View mode"><button type="button" id="vmM" title="Mobile view" aria-label="Mobile view">📱</button><button type="button" id="vmP" title="PC view" aria-label="PC view">🖥️</button></div>
+      </div>
+      <div class="auth"><span class="auth-who" id="authWho"></span><button type="button" class="auth-btn" id="authBtn">Sign in</button></div>
+      <div class="sub" id="connState"></div>
+    </div>
+  </header>
+  <div class="auth-panel" id="authPanel" hidden>
+    <div><b>Sign in to record readings</b><div class="sub">Anyone can view this log. To save, edit or delete readings, sign in with your approved email. We'll email you a sign-in link.</div></div>
+    <div class="row"><input type="email" id="authEmail" placeholder="your.email@example.com" autocomplete="email"><button type="button" class="btn primary sm" id="authSend">Email me a link</button><button type="button" class="btn sm" id="authClose">Cancel</button></div>
+    <div class="msg" id="authMsg"></div>
+  </div>
+
+  <section class="strip" aria-label="Final discharge status">
+    <div class="strip-head">
+      <div class="verdict" id="verdict"><span class="dot"></span><span>No reading yet for today</span></div>
+      <div class="sub" id="stripDate"></div>
+    </div>
+    <div class="strip-row"><div class="chips" id="stripChips"></div><a class="sync" id="syncStat" target="_blank" rel="noopener"><span class="dot"></span><span id="syncTxt">Google Sheet not synced</span></a></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-entry" aria-selected="true" data-tab="entry">Daily entry</button>
+    <button role="tab" id="tab-history" aria-selected="false" data-tab="history">History</button>
+    <button role="tab" id="tab-trends" aria-selected="false" data-tab="trends">Trends</button>
+    <button role="tab" id="tab-limits" aria-selected="false" data-tab="limits">Limits</button>
+    <button role="tab" id="tab-calib" aria-selected="false" data-tab="calib">Calibration</button>
+    <button role="tab" id="tab-settings" aria-selected="false" data-tab="settings">System Settings</button>
+    <button role="tab" id="tab-contact" aria-selected="false" data-tab="contact">Contact</button>
+  </nav>
+
+  <!-- PHONE DASHBOARD -->
+  <section id="pane-dash" role="tabpanel" hidden class="pd"><div id="dashBody" class="pd"></div></section>
+
+  <nav class="bnav" id="bnav" aria-label="Sections">
+    <button type="button" data-go="dash"><span class="ic">📊</span>Dashboard</button>
+    <button type="button" data-go="entry" aria-expanded="false" aria-controls="entrySheet"><span class="ic">➕</span>Entry ▾</button>
+    <button type="button" data-go="history"><span class="ic">📋</span>History</button>
+    <button type="button" data-go="trends"><span class="ic">📈</span>Trends</button>
+    <button type="button" data-go="more" aria-expanded="false" aria-controls="moreSheet"><span class="ic">☰</span>More</button>
+  </nav>
+  <div class="more-sheet entry-sheet" id="entrySheet" hidden role="menu" aria-label="Choose entry section">
+    <div class="es-h">Daily entry – choose a section</div>
+    <button type="button" data-sec="all">🗂️ All sections</button>
+    <button type="button" data-sec="IETS">🧪 IETS</button>
+    <button type="button" data-sec="Water Monitoring">💧 Water Monitoring</button>
+    <button type="button" data-sec="IETS Testing Kit Inventory">📦 Testing Kit Inventory</button>
+    <button type="button" data-sec="Daily Chemical Usage">⚗️ Chemical Usage</button>
+  </div>
+  <div class="more-sheet" id="moreSheet" hidden>
+    <button type="button" data-go="limits">📏 Limits</button>
+    <button type="button" data-go="calib">🔧 Calibration</button>
+    <button type="button" data-go="settings">⚙️ System Settings</button>
+    <button type="button" data-go="contact">📞 Contact</button>
+  </div>
+
+  <!-- ENTRY -->
+  <section id="pane-entry" role="tabpanel" style="display:grid;gap:14px">
+    <div class="entry-bar">
+      <div class="field sec-pick"><label for="f_sec">Section</label><select id="f_sec"><option value="all">All sections</option><option value="IETS">IETS</option><option value="Water Monitoring">Water Monitoring</option><option value="IETS Testing Kit Inventory">IETS Testing Kit Inventory</option><option value="Daily Chemical Usage">Daily Chemical Usage</option></select></div>
+      <div class="field"><label for="f_date">Sampling date</label><input type="date" id="f_date"></div>
+      <div class="field"><label for="f_time">Sampling time (auto)</label><input type="time" id="f_time" readonly title="Set automatically from the actual time"></div>
+      <div class="field" style="flex:1;min-width:180px"><label for="f_by">Recorded by</label><select id="f_by"><option value="">Select name</option><option>Badarudin</option><option>Bishnu</option><option>Prakash</option><option>Admin</option></select></div>
+      <button type="button" class="cam-btn" id="camBtn" title="Scan a log sheet or meter with the camera" aria-label="Scan with camera"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;pointer-events:none"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><span>Scan photo</span></button>
+      <input type="file" id="camFile" accept="image/*" capture="environment" hidden>
+      <div class="msg" id="loadedNote"></div>
+    </div>
+    <div class="imp cam-panel" id="camPanel" hidden>
+      <div class="imp-h"><h2 id="camTitle">Reading photo…</h2><span class="sub" id="camSub">Claude is reading the readings in your photo and converting them to CSV.</span></div>
+      <div class="cam-body"><img id="camThumb" alt="Photo being read"><div class="cam-out"><div class="msg" id="camMsg"></div><div id="camPreview"></div>
+        <details id="camCsvBox" hidden><summary>Show CSV</summary><textarea id="camCsv" rows="6" spellcheck="false" aria-label="Converted CSV"></textarea></details></div></div>
+      <div class="actions" id="camActs"><button type="button" class="btn primary" id="camLoad" hidden>Load into log</button><button type="button" class="btn sm" id="camDl" hidden>Download CSV</button><button type="button" class="btn sm" id="camRetake" hidden>Retake photo</button><button type="button" class="btn sm" id="camStop">Stop</button><button type="button" class="btn sm" id="camClose" hidden>Discard</button></div>
+    </div>
+    <div class="form-blocks" id="stages"></div>
+    <div class="foot">
+      <div class="field"><label for="f_rem">Remarks &amp; corrective action</label><textarea id="f_rem" placeholder="Required when any discharge reading is over limit — what was seen and what was done."></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="saveBtn">Save reading</button>
+      <button class="btn" id="clearBtn">Clear form</button>
+      <span class="msg" id="saveMsg"></span>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="pane-history" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="actions" style="align-items:flex-end">
+      <div class="field"><label for="h_month">Month</label><select id="h_month"></select></div>
+      <button class="btn sm" id="csvBtn" style="min-height:38px">Export CSV</button>
+      <button class="btn sm" id="impBtn" style="min-height:38px" aria-expanded="false" aria-controls="impPanel">Import CSV</button>
+      <button class="btn sm" id="bkHist" style="min-height:38px" title="Create a fresh backup copy in Google Drive">Back up</button>
+      <button class="btn sm primary" id="rptBtn" style="min-height:38px" aria-expanded="false" aria-controls="rptPanel">Generate Report</button>
+      <span class="msg" id="csvMsg"></span>
+    </div>
+    <div class="rpt-wrap" id="rptPanel" hidden>
+      <div class="rpt-top"><button type="button" class="btn sm rpt-back" id="rptBack" aria-label="Back to the previous page">← Back</button></div>
+      <div class="imp-h"><h2>Generate Report</h2><span class="sub">Monthly report in the plant\u2019s paper-form layout, for the month selected above.</span></div>
+      <div class="actions" style="align-items:flex-end">
+        <div class="field"><label for="rptType">Report</label><select id="rptType"><option value="water">IETS Water Monitoring</option><option value="kit">IETS Testing Kit Inventory</option><option value="chem">IETS Chemical Inventory</option></select></div>
+        <button class="btn sm" id="rptDl" type="button" style="min-height:38px">Download PDF</button>
+        <button class="btn sm" id="rptDrive" type="button" style="min-height:38px">Save PDF to Google Drive</button>
+        <span class="msg" id="rptMsg"></span>
+      </div>
+      <div class="rpt-paper" id="rptPaper"></div>
+    </div>
+    <div class="imp" id="impPanel" hidden>
+      <div class="imp-h"><h2>Import CSV</h2><span class="sub">Use the same columns as Export CSV. Each row is one day. Dates in dd-mm-yyyy; dd-mm-yy (e.g. 05-10-26) is corrected to dd-mm-yyyy automatically.</span></div>
+      <div class="imp-src">
+        <div class="imp-opt">
+          <div class="lbl">From this device</div>
+          <input type="file" id="impFile" accept=".csv,text/csv">
+          <button type="button" class="cam-btn" id="camBtn2" title="Take a photo of a log sheet and convert it to CSV"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;pointer-events:none"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><span>From photo (camera)</span></button>
+        </div>
+        <div class="imp-opt">
+          <div class="lbl">From cloud storage link (Google Drive)</div>
+          <div class="imp-row"><input type="url" id="impUrl" placeholder="Paste a Google Drive CSV or Google Sheet link"><button class="btn sm" id="impLoad" type="button">Load from link</button></div>
+          <div class="sub">Works with a .csv file or a Google Sheet (first tab) you can open in Google Drive. Uses your Google Drive connector in Claude.</div>
+        </div>
+      </div>
+      <div class="msg" id="impMsg"></div>
+      <div id="impPreview" hidden>
+        <div class="chips" id="impChips"></div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn primary sm" id="impAll" type="button">Add new readings</button>
+          <button class="btn sm" id="impNew" type="button">Import new days only</button>
+          <button class="btn sm" id="impCancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div class="subtabs" role="tablist" aria-label="History section">
+      <button type="button" role="tab" data-sub="iets" aria-selected="true">IETS</button>
+      <button type="button" role="tab" data-sub="water" aria-selected="false">Water Monitoring</button>
+      <button type="button" role="tab" data-sub="eq" aria-selected="false">EQ Tank Water Input</button>
+      <button type="button" role="tab" data-sub="kit" aria-selected="false">Testing Kit Inventory</button>
+      <button type="button" role="tab" data-sub="chem" aria-selected="false">Chemical Usage</button>
+    </div>
+    <div id="histBody"></div>
+    <p class="note">The pencil opens that day in Daily entry to edit. ✕ deletes the readings for the section you are viewing. Shaded cells are near limit (amber) or over limit (red).</p>
+  </section>
+
+  <!-- TRENDS -->
+  <section id="pane-trends" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="actions">
+      <div class="field"><label for="t_range">Period</label>
+        <select id="t_range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option><option value="custom">User define period</option></select></div>
+      <div class="field" id="t_fromF" hidden><label for="t_from">From (dd/mm/yyyy)</label><input type="text" id="t_from" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" style="width:140px"></div>
+      <div class="field" id="t_toF" hidden><label for="t_to">To (dd/mm/yyyy)</label><input type="text" id="t_to" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" style="width:140px"></div>
+      <button class="btn sm primary" id="trPdf" type="button" style="min-height:38px;align-self:flex-end">Create PDF</button>
+      <span class="msg" id="trMsg" style="align-self:center"></span>
+    </div>
+    <div class="rpt-wrap" id="trPrev" hidden>
+      <div class="rpt-top"><button type="button" class="btn sm rpt-back" id="trBack" aria-label="Back to the trend charts">← Back</button></div>
+      <div class="rpt-paper" id="trPrevBody" style="display:grid;gap:14px;justify-items:center"></div>
+    </div>
+    <div id="trendBody"></div>
+  </section>
+
+  <!-- CALIBRATION -->
+  <section id="pane-calib" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="actions"><button class="btn primary sm" id="calAdd" type="button">Add instrument</button><span class="msg" id="calMsg"></span></div>
+    <div class="imp" id="calForm" hidden>
+      <div class="imp-h"><h2 id="calFormTitle">Add instrument</h2><span class="sub">Next due uses the recalibration date on the certificate; if blank, last calibration date + interval.</span></div>
+      <div class="cal-grid">
+        <div class="field"><label for="cal_name">Instrument</label><input type="text" id="cal_name" placeholder="e.g. pH Meter"></div>
+        <div class="field"><label for="cal_model">Model</label><input type="text" id="cal_model" placeholder="Optional"></div>
+        <div class="field"><label for="cal_serial">Serial no.</label><input type="text" id="cal_serial" placeholder="Optional"></div>
+        <div class="field"><label for="cal_ctrl">Control no.</label><input type="text" id="cal_ctrl" placeholder="Optional"></div>
+        <div class="field"><label for="cal_eq">Equipment ID</label><input type="text" id="cal_eq" placeholder="Optional"></div>
+        <div class="field"><label for="cal_range">Capacity / range</label><input type="text" id="cal_range" placeholder="e.g. 0.00 pH to 14.00 pH"></div>
+        <div class="field"><label for="cal_sec">Section</label><select id="cal_sec"></select></div>
+        <div class="field"><label for="cal_int">Calibration interval (months)</label><input type="number" id="cal_int" min="1" step="1" inputmode="numeric" placeholder="e.g. 12"></div>
+        <div class="field"><label for="cal_last">Date of calibration</label><input type="date" id="cal_last"></div>
+        <div class="field"><label for="cal_due">Recalibration date (from certificate)</label><input type="date" id="cal_due"></div>
+        <div class="field"><label for="cal_vendor">Calibration lab</label><input type="text" id="cal_vendor" placeholder="e.g. Trescal (Malaysia) Sdn. Bhd."></div>
+        <div class="field"><label for="cal_by">Calibrated by</label><input type="text" id="cal_by" list="calByList" placeholder="Technician name"></div>
+        <div class="field"><label for="cal_ref">Certificate no.</label><input type="text" id="cal_ref" placeholder="Optional"></div>
+        <div class="field" style="grid-column:1/-1"><label for="cal_rem">Remarks</label><input type="text" id="cal_rem" placeholder="Optional"></div>
+      </div>
+      <datalist id="calByList"><option value="Badarudin"></option><option value="Bishnu"></option><option value="Prakash"></option><option value="Admin"></option></datalist>
+      <div class="actions"><button class="btn primary sm" id="calSave" type="button">Save instrument</button><button class="btn sm" id="calCancel" type="button">Cancel</button><span class="msg" id="calFormMsg"></span></div>
+    </div>
+    <div id="calBody"></div>
+    <p class="note">Status turns amber 30 days before the recalibration date and red once overdue or after a failed calibration. Tap an instrument name to see the full certificate details and calibration history.</p>
+  </section>
+
+  <!-- SYSTEM SETTINGS -->
+  <section id="pane-settings" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="imp" id="bkPanel">
+      <div class="imp-h"><h2>Google Sheet Sync</h2><span class="sub">Keeps a copy of every record (all months, all sections) in Google Drive as a Google Sheet.</span></div>
+      <div class="set-status"><span class="lbl">Status</span><span class="sync" id="syncStat2"><span class="dot"></span><span id="syncTxt2">Google Sheet not synced</span></span><button class="btn sm" id="syncNow" type="button">Sync now</button><span class="msg" id="syncMsg"></span></div>
+      <div class="imp-opt">
+        <div class="lbl">Google Sheet link (sync target)</div>
+        <input type="url" id="bkSheet" placeholder="Paste the Google Sheet link the log syncs into">
+        <div class="sub" id="bkSheetLink"></div>
+        <div class="sub">Every record is written into the first tab of this Google Sheet, replacing what was there, so the sheet always matches the log. Each person who saves readings needs the Google Sheets connector in Claude and edit access to this sheet.</div>
+        <div class="lbl" style="margin-top:6px">Google Drive folder link (for backup copies and saved PDFs)</div>
+        <input type="url" id="bkFolder" placeholder="Paste a Drive folder link, or leave blank for My Drive">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);font-weight:600;margin-top:4px"><input type="checkbox" id="bkAuto" style="width:auto;margin-top:2px" checked> <span>Sync automatically whenever new data is input — saved, imported, scanned, edited or deleted, by anyone<br><span class="sub" style="font-weight:400">Updates the Google Sheet linked above. If someone without the Google Sheets connector adds data, the sheet catches up automatically the next time anyone with it has the log open.</span></span></label>
+      </div>
+      <div class="sub" id="bkAutoLast"></div>
+    </div>
+    <div class="imp">
+      <div class="imp-h"><h2>Backup copy</h2><span class="sub">Saves a separate Google Sheet named with today’s date and time. It is never replaced, so use it before big changes or at month end. Restore with History → Import CSV → From cloud storage link.</span></div>
+      <div class="actions"><button class="btn primary sm" id="bkGo" type="button">Create backup copy</button><span class="msg" id="bkMsg"></span></div>
+      <div class="sub" id="bkLast"></div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="pane-contact" role="tabpanel" hidden style="display:grid;gap:12px">
+    <div class="contacts">
+      <div class="ct-card">
+        <div class="ct-role">Equipment Calibration</div>
+        <h2>Trescal (Malaysia) Sdn. Bhd.</h2>
+        <div class="ct-row"><span class="k">Name</span><span class="v">Ms. Yati</span></div>
+        <div class="ct-row"><span class="k">Phone</span><a class="v ct-tel" href="tel:+60162281865">016-2281865</a><button class="btn sm ct-copy" type="button" data-copy="016-2281865">Copy</button></div>
+      </div>
+      <div class="ct-card">
+        <div class="ct-role">Water Sample Lab Test</div>
+        <h2>A&amp;A Scientific Resources Sdn. Bhd.</h2>
+        <div class="ct-row"><span class="k">Name</span><span class="v">Adilah</span></div>
+        <div class="ct-row"><span class="k">Phone</span><a class="v ct-tel" href="tel:+60146423619">014-6423619</a><button class="btn sm ct-copy" type="button" data-copy="014-6423619">Copy</button></div>
+      </div>
+      <div class="ct-card">
+        <div class="ct-role">Consultant</div>
+        <h2>DMAG Technical Sdn. Bhd.</h2>
+        <div class="ct-row"><span class="k">Name</span><span class="v">Jason Lee</span></div>
+        <div class="ct-row"><span class="k">Phone</span><a class="v ct-tel" href="tel:+60123799378">012-3799378</a><button class="btn sm ct-copy" type="button" data-copy="012-3799378">Copy</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIMITS -->
+  <section id="pane-limits" role="tabpanel" hidden style="display:grid;gap:12px">
+    <p class="note"><b>This IETS complies with Standard B</b> of the Environmental Quality (Industrial Effluent) Regulations 2009, Fifth Schedule: final discharge COD ≤ 200 mg/L, TSS ≤ 100 mg/L, pH 5.5 – 9.0. If your DOE licence sets tighter values, adjust them below. Process targets for influent and aeration are internal operating ranges. Amber shows when a reading reaches the warning % of a maximum limit.</p>
+    <div class="imp" id="compPanel">
+      <div class="imp-h"><h2>Standard B compliance – latest readings</h2><span class="sub" id="compSub"></span></div>
+      <div id="compBody"></div>
+    </div>
+    <div class="actions" id="presetBar">
+      <span class="msg" id="limRole"></span>
+    </div>
+    <div class="lim-grid" id="limGrid"></div>
+    <div class="actions"><button class="btn primary" id="limSave">Save limits</button><span class="msg" id="limMsg"></span></div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script>
+(function(){
+"use strict";
+const GROUPS=[
+  {id:"inf",name:"Influent",step:"01"},
+  {id:"clr",name:"Clarifier",step:"02"},
+  {id:"aer",name:"Aeration Tank",step:"03"},
+  {id:"fd",name:"Final Discharge",step:"04"},
+  {id:"fdm",name:"IETS Final Discharge",step:"05"},
+  {id:"pond",name:"Retention Pond",step:"06"},
+  {id:"wm",name:"Incoming Water Meter",step:"07"},
+  {id:"eq",name:"EQ Tank Water Input",step:"08"},
+  {id:"kit15k",name:"COD 15000 mg/L",step:"K1",info:["Monthly usage 30 pcs","Minimum stock 20 pcs","Order qty 160 pcs"]},
+  {id:"kit1500",name:"COD 1500 mg/L",step:"K2",info:["Monthly usage 30 pcs","Minimum stock 20 pcs","Order qty 160 pcs"]},
+  {id:"kit160",name:"COD 160 mg/L",step:"K3",info:["Monthly usage 30 pcs","Minimum stock 20 pcs","Order qty 160 pcs"]},
+  {id:"coag",name:"Coagulant",step:"C1",info:["Stock code W1AB01011","Average 32 jar / month","Minimum stock 25 jar (20 days)","Minimum order 50 jar"]},
+  {id:"poly",name:"Polymer-Anion",step:"C2",info:["Stock code W1AB01012","Average 15 jar / month","Minimum stock 10 jar (15 days)","Minimum order 20 jar"]},
+  {id:"lime",name:"Lime",step:"C3",info:["Stock code W1AB01013","Average 5 bag / month","Minimum stock 5 bag (30 days)","Minimum order 15 bag"]}
+];
+const COLOR_OPTS=["Clean","Cloudy"];
+const OG_OPTS=["None","Trace sheen","Spot visible"];
+const P=[
+  {k:"inf_cod",g:"inf",label:"COD",unit:"mg/L",step:"1",int:true},
+  {k:"inf_ph",g:"inf",label:"pH",unit:"",step:"0.01"},
+  {k:"inf_flow",g:"inf",label:"Influent flowrate",unit:"m³/d",step:"1",int:true},
+  {k:"clr_cod",g:"clr",label:"COD",unit:"mg/L",step:"1",int:true},
+  {k:"clr_tss",g:"clr",label:"TSS",unit:"mg/L",step:"1"},
+  {k:"aer_sv30",g:"aer",label:"SV30",unit:"mL/L",step:"1"},
+  {k:"aer_ph",g:"aer",label:"pH",unit:"",step:"0.01"},
+  {k:"fd_cod",g:"fd",label:"COD",unit:"mg/L",step:"1",int:true},
+  {k:"fd_tss",g:"fd",label:"TSS",unit:"mg/L",step:"1"},
+  {k:"fd_color",g:"fd",label:"Colour",unit:"visual",opts:COLOR_OPTS},
+  {k:"fd_og",g:"fd",label:"Oil & grease spot",unit:"visual",opts:OG_OPTS},
+  {k:"fd_ph",g:"fd",label:"pH",unit:"",step:"0.01"},
+  {k:"fd_flow",g:"fd",label:"Discharge flowrate",unit:"m³/d",step:"0.1"},
+  {k:"fdm_read",g:"fdm",label:"Final discharge volume (today)",unit:"m³",step:"0.01"},
+  {k:"pond_open",g:"pond",label:"Water level – 7am (opening)",unit:"m",step:"0.01",max:0.59},
+  {k:"pond_close",g:"pond",label:"Water level – 7pm (closing)",unit:"m",step:"0.01",max:0.59},
+  {k:"pond_open_vol",g:"pond",label:"Volume – 7am",unit:"m³",step:"0.01",calc:"pond_open"},
+  {k:"pond_close_vol",g:"pond",label:"Volume – 7pm",unit:"m³",step:"0.01",calc:"pond_close"},
+  {k:"wm_read",g:"wm",label:"Meter reading (7am)",unit:"m³",step:"0.01"},
+  {k:"wm_use",g:"wm",label:"Water usage",unit:"m³",step:"0.01",calc:"wm"},
+  {k:"eq_read",g:"eq",label:"Water input to EQ tank (today)",unit:"m³",step:"0.01"},
+  {k:"k15_in",g:"kit15k",label:"In",unit:"pcs",step:"1",int:true,inv:"k15"},{k:"k15_out",g:"kit15k",label:"Out",unit:"pcs",step:"1",int:true,inv:"k15"},{k:"k15_bal",g:"kit15k",label:"Balance",unit:"pcs",step:"1",int:true,inv:"k15",bal:true},
+  {k:"k1500_in",g:"kit1500",label:"In",unit:"pcs",step:"1",int:true,inv:"k1500"},{k:"k1500_out",g:"kit1500",label:"Out",unit:"pcs",step:"1",int:true,inv:"k1500"},{k:"k1500_bal",g:"kit1500",label:"Balance",unit:"pcs",step:"1",int:true,inv:"k1500",bal:true},
+  {k:"k160_in",g:"kit160",label:"In",unit:"pcs",step:"1",int:true,inv:"k160"},{k:"k160_out",g:"kit160",label:"Out",unit:"pcs",step:"1",int:true,inv:"k160"},{k:"k160_bal",g:"kit160",label:"Balance",unit:"pcs",step:"1",int:true,inv:"k160",bal:true},
+  {k:"c_in",g:"coag",label:"In",unit:"jar",step:"1",int:true,inv:"c"},{k:"c_out",g:"coag",label:"Out",unit:"jar",step:"1",int:true,inv:"c"},{k:"c_bal",g:"coag",label:"Balance",unit:"jar",step:"1",int:true,inv:"c",bal:true},
+  {k:"p_in",g:"poly",label:"In",unit:"kg",step:"0.1",inv:"p"},{k:"p_out",g:"poly",label:"Out",unit:"g",step:"1",int:true,inv:"p",factor:0.001},{k:"p_bal",g:"poly",label:"Balance",unit:"kg",step:"0.1",inv:"p",bal:true},
+  {k:"l_in",g:"lime",label:"In",unit:"bag",step:"1",int:true,inv:"l"},{k:"l_out",g:"lime",label:"Out",unit:"bag",step:"1",int:true,inv:"l"},{k:"l_bal",g:"lime",label:"Balance",unit:"bag",step:"1",int:true,inv:"l",bal:true}
+];
+const POND_L=2.9,POND_W=5.61,POND_AREA=POND_L*POND_W;
+const vol=h=>h==null||!isFinite(h)?null:Math.round(h*POND_AREA*100)/100;
+function prevMeter(date,mk){mk=mk||"wm_read";let best=null;LOGS.forEach((d,k)=>{if(k<date&&d[mk]!=null&&(!best||k>best.date))best={date:k,v:+d[mk]}});return best}
+function meterUse(date,r,mk){if(r==null)return null;const p=prevMeter(date,mk);return p?Math.round((r-p.v)*100)/100:null}
+function prevBal(base,date){let best=null;LOGS.forEach((d,k)=>{const v=d[base+"_bal"];if(k<date&&v!=null&&v!==""&&(!best||k>best.date))best={date:k,v:+v}});return best}
+function autoBal(base,date,inV,outV){const pb=prevBal(base,date);if(!pb&&inV==null)return null;const fo=(P.find(p=>p.k===base+"_out")||{}).factor||1;
+  let v=(pb?pb.v:0)+(inV||0)-(outV||0)*fo;const st=(P.find(p=>p.k===base+"_bal")||{}).step;return st==="0.1"?Math.round(v*10)/10:Math.round(v)}
+const isDash=v=>/^\s*[-–—_~]+\s*$/.test(String(v));
+const INV_BASES=["k15","k1500","k160","c","p","l"];
+function rowVal(k,date,d){return k==="wm_use"?meterUse(date,d.wm_read):d[k]}
+const PK=Object.fromEntries(P.map(p=>[p.k,p]));
+const NUMERIC=P.filter(p=>!p.opts);
+const LIMIT_KEYS=[
+  {k:"inf_cod",kind:"max",note:"Process design load (optional)"},
+  {k:"inf_ph",kind:"range",note:"Process target"},
+  {k:"clr_cod",kind:"max",note:"Process target (optional)"},
+  {k:"clr_tss",kind:"max",note:"Process target (optional)"},
+  {k:"aer_sv30",kind:"range",note:"Process target"},
+  {k:"aer_ph",kind:"range",note:"Process target"},
+  {k:"fd_cod",kind:"max",note:"Discharge limit"},
+  {k:"fd_tss",kind:"max",note:"Discharge limit"},
+  {k:"fd_ph",kind:"range",note:"Discharge limit"},
+  {k:"fd_flow",kind:"max",note:"Licensed / design discharge (optional)"}
+];
+const STD={
+  A:{fd_cod:{max:80},fd_tss:{max:50},fd_ph:{min:6,max:9}},
+  B:{fd_cod:{max:200},fd_tss:{max:100},fd_ph:{min:5.5,max:9}}
+};
+function defaultLimits(){return{
+  standard:"B",warnPct:80,
+  inf_cod:{max:null},inf_ph:{min:6,max:9},clr_cod:{max:null},clr_tss:{max:null},
+  aer_sv30:{min:150,max:450},aer_ph:{min:6.5,max:8.5},
+  fd_cod:{max:200},fd_tss:{max:100},fd_ph:{min:5.5,max:9},fd_flow:{max:null},
+  k15_bal:{min:20},k1500_bal:{min:20},k160_bal:{min:20},c_bal:{min:25},l_bal:{min:5}
+};}
+let LIM=defaultLimits();
+let LOGS=new Map(); // date -> data
+
+/* ---------- Shared store in Supabase ---------- */
+const SB_URL="https://vzajyuuqnkblgimxpbhf.supabase.co",SB_KEY="sb_publishable_LZayCysTuGrWoSpQJDY1Vg_YEk4Asjh",SB_TABLE="kv",CACHE_KEY="iets_sb_cache_v1";
+const NO_CLOUD=true;let sb=null,me=null;
+function sheetErr(e,what){const c=e&&e.code,m=String(e&&e.message||"");
+  if(c==="42501"||/row-level security|permission denied/i.test(m))return"Couldn't "+what+": your email isn't approved to record readings, or you're signed out. Sign in, or ask the owner to add your email.";
+  if(c==="no_db")return"Couldn't "+what+": the database isn't reachable. Check the internet connection.";
+  return"Couldn't "+what+" ("+(c||m||"error")+"). Check the connection and try again."}
+function makeSbDb(client){
+  const data=new Map(),cSubs={},dSubs={};let loaded=false;
+  const K=(c,i)=>c+"/"+i;
+  try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");if(c&&c.d)Object.entries(c.d).forEach(([k,v])=>data.set(k,v))}catch(e){}
+  const saveCache=()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify({d:Object.fromEntries(data)}))}catch(e){}};
+  const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
+  const snapOf=c=>{const docs=[];data.forEach((v,k)=>{const j=k.indexOf("/");if(k.slice(0,j)===c){const id=k.slice(j+1);docs.push({id,exists:true,data:()=>clone(v)})}});return{docs,metadata:{fromCache:!loaded}}};
+  const dsnap=(c,i)=>{const v=data.get(K(c,i));return{id:i,exists:v!==undefined,data:()=>v===undefined?undefined:clone(v)}};
+  const emit=c=>{(cSubs[c]||[]).forEach(f=>{try{f.ok(snapOf(c))}catch(e){console.error(e)}});Object.keys(dSubs).forEach(k=>{if(k.startsWith(c+"/")){const i=k.slice(c.length+1);dSubs[k].forEach(f=>{try{f.ok(dsnap(c,i))}catch(e){console.error(e)}})}})};
+  const emitAll=()=>{const cs=new Set(Object.keys(cSubs));Object.keys(dSubs).forEach(k=>cs.add(k.split("/")[0]));cs.forEach(emit)};
+  const failAll=e=>{Object.values(cSubs).flat().forEach(f=>f.err&&f.err(e))};
+  const E=err=>({code:err&&err.code||"error",message:err&&err.message||String(err)});
+  async function load(){
+    if(!client)throw{code:"no_db"};
+    const rows=[];for(let from=0;;from+=1000){const{data:d,error}=await client.from(SB_TABLE).select("collection,id,data").order("collection").order("id").range(from,from+999);if(error)throw E(error);rows.push(...d);if(d.length<1000)break}
+    data.clear();rows.forEach(r=>data.set(K(r.collection,r.id),r.data));loaded=true;saveCache();emitAll();
+  }
+  async function refresh(){try{await load();return true}catch(e){failAll(e);return false}}
+  async function put(c,i,v){if(!client)throw{code:"no_db"};
+    const{error}=await client.from(SB_TABLE).upsert({collection:c,id:i,data:v,updated_at:new Date().toISOString(),updated_by:me&&me.email||null});
+    if(error)throw E(error);data.set(K(c,i),clone(v));saveCache();emit(c)}
+  async function del(c,i){if(!client)throw{code:"no_db"};
+    const{error}=await client.from(SB_TABLE).delete().eq("collection",c).eq("id",i);if(error)throw E(error);data.delete(K(c,i));saveCache();emit(c)}
+  const genId=()=>"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const docRef=(c,i)=>({id:i,get:async()=>dsnap(c,i),set:async b=>put(c,i,clone(b)),
+    update:async p=>{const cur=data.get(K(c,i));if(cur===undefined)throw{code:"not_found",message:"Record not found"};return put(c,i,Object.assign(clone(cur),clone(p)))},
+    delete:async()=>del(c,i),
+    onSnapshot:(ok,err)=>{const k=K(c,i);(dSubs[k]=dSubs[k]||[]).push({ok,err});setTimeout(()=>ok(dsnap(c,i)),0);return()=>{}}});
+  const coll=c=>{const q={orderBy:()=>q,limit:()=>q,where:()=>q,onSnapshot:(ok,err)=>{(cSubs[c]=cSubs[c]||[]).push({ok,err});setTimeout(()=>ok(snapOf(c)),0);return()=>{}},doc:id=>docRef(c,id||genId())};return q};
+  if(client){
+    refresh();
+    try{client.channel("kv-live").on("postgres_changes",{event:"*",schema:"public",table:SB_TABLE},p=>{
+      const n=p.new&&p.new.collection?p.new:null,o=p.old&&p.old.collection?p.old:null;
+      if(p.eventType==="DELETE"&&o){data.delete(K(o.collection,o.id));saveCache();emit(o.collection)}
+      else if(n){data.set(K(n.collection,n.id),n.data);saveCache();emit(n.collection)}
+    }).subscribe()}catch(e){}
+    setInterval(()=>{if(document.visibilityState==="visible")refresh()},120000);
+    document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refresh()});
+  }
+  return{collection:coll,doc:path=>{const[c,...r]=path.split("/");return docRef(c,r.join("/"))},refresh,isLoaded:()=>loaded,hasCache:()=>data.size>0};
+}
+const fileDownloads={save:async({filename,data})=>{const blob=data instanceof Blob?data:new Blob([data],{type:/\.csv$/i.test(filename)?"text/csv":"application/octet-stream"});
+  const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return{status:"saved"}}};
+let db=null,user=null,downloads=null,canWrite=false,canAdmin=false;
+let dirty=false,dbOk=false,netDetail=false;
+function updateNet(){
+  const on=navigator.onLine!==false&&dbOk;const b=$("#netBtn");
+  b.className="net "+(on?"on":"off");$("#netTxt").textContent=on?"Online":"Offline";
+  b.title=on?"Connected to the shared log. Readings save for everyone.":(navigator.onLine===false?"No internet connection on this device.":"Not connected to the shared log. Readings can't be saved right now.");
+  if(netDetail)$("#connState").textContent=b.title;
+}
+
+const $=s=>document.querySelector(s);
+const el=(t,a={},...c)=>{const e=document.createElement(t);for(const[k,v]of Object.entries(a)){if(k==="class")e.className=v;else if(k==="text")e.textContent=v;else e.setAttribute(k,v)}c.forEach(x=>x!=null&&e.append(x));return e};
+const pad=n=>String(n).padStart(2,"0");
+function setBy(v){const s=$("#f_by");if(v&&![...s.options].some(o=>o.value===v))s.append(el("option",{value:v,text:v}));s.value=v||""}
+const nowHM=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
+const isoToday=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const dmy=iso=>iso?iso.slice(8,10)+"-"+iso.slice(5,7)+"-"+iso.slice(0,4):"";
+const monthName=ym=>{const[y,m]=ym.split("-");return new Date(+y,+m-1,1).toLocaleString("en-GB",{month:"long",year:"numeric"})};
+const fmt=(k,v)=>{if(v==null||v==="")return"—";if(PK[k]&&PK[k].opts)return v;const st=PK[k].step;const d=st==="0.01"?2:st==="0.1"?1:0;return Number(v).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d})};
+
+/* ---------- status logic ---------- */
+function status(k,v){
+  if(v==null||v==="")return"none";
+  if(k==="fd_color")return v==="Cloudy"?"bad":v==="Clean"?"ok":"none";
+  if(k==="fd_og")return v==="Spot visible"?"bad":v==="Trace sheen"?"warn":"ok";
+  const L=LIM[k]||defaultLimits()[k];if(!L)return"none";
+  const x=Number(v);if(!isFinite(x))return"none";
+  if(/_bal$/.test(k)&&L.min!=null){return x<=L.min?"bad":x<=L.min*1.25?"warn":"ok"}
+  const hasMin=L.min!=null&&L.min!=="",hasMax=L.max!=null&&L.max!=="";
+  if(!hasMin&&!hasMax)return"none";
+  if(hasMax&&x>L.max)return"bad";
+  if(hasMin&&x<L.min)return"bad";
+  if(hasMin&&hasMax){const m=(L.max-L.min)*0.05;if(x>L.max-m||x<L.min+m)return"warn";return"ok"}
+  if(hasMax&&x>=L.max*(LIM.warnPct||80)/100)return"warn";
+  return"ok";
+}
+function limitText(k){
+  if(k==="fd_color")return"Cloudy = alert";
+  if(k==="fd_og")return"Spot visible = alert";
+  const L=LIM[k];if(!L)return"";
+  const hasMin=L.min!=null&&L.min!=="",hasMax=L.max!=null&&L.max!=="";
+  if(hasMin&&hasMax)return L.min+" – "+L.max;
+  if(hasMax)return"≤ "+L.max;
+  if(hasMin)return"≥ "+L.min;
+  return"";
+}
+const PILL={ok:"OK",warn:"NEAR",bad:"OVER",none:"—"};
+
+/* ---------- build entry form ---------- */
+function buildForm(){
+  const host=$("#stages");host.textContent="";
+  const IETS_IDS=["inf","clr","aer","fd"];
+  const ietsGrid=el("div",{class:"stages"}),otherGrid=el("div",{class:"stages s2"}),kitGrid=el("div",{class:"stages s3"}),chemGrid=el("div",{class:"stages s3"});
+  const KIT_IDS=["kit15k","kit1500","kit160"],CHEM_IDS=["coag","poly","lime"];
+  host.append(el("section",{class:"block","aria-label":"IETS"},el("div",{class:"block-h"},el("h2",{text:"IETS"}),el("span",{class:"sub",text:"Integrated Effluent Treatment System"})),ietsGrid),
+    el("section",{class:"block","aria-label":"Water Monitoring"},el("div",{class:"block-h"},el("h2",{text:"Water Monitoring"}),el("span",{class:"sub",text:"Final discharge meter, retention pond, incoming water meter and EQ tank water input"})),otherGrid),
+    el("section",{class:"block","aria-label":"IETS Testing Kit Inventory"},el("div",{class:"block-h"},el("h2",{text:"IETS Testing Kit Inventory"}),el("span",{class:"sub",text:"Daily record \u00b7 Balance fills in automatically (previous balance + In \u2212 Out); type over it to correct"})),kitGrid),
+    el("section",{class:"block","aria-label":"Daily Chemical Usage"},el("div",{class:"block-h"},el("h2",{text:"Daily Chemical Usage"}),el("span",{class:"sub",text:"Chemical inventory \u00b7 Polymer out in grams, balance in kg"})),chemGrid,
+      el("div",{class:"inv-extra"},el("div",{class:"field"},el("label",{for:"f_chk",text:"Checked by (engineer)"}),el("input",{type:"text",id:"f_chk",placeholder:"Engineer name or initials"})))),
+    el("div",{class:"inv-note","data-sec":"inv"},el("div",{class:"field"},el("label",{for:"f_note",text:"Plant status / inventory remark"}),el("input",{type:"text",id:"f_note",list:"noteList",placeholder:"e.g. Plan Not Running \u2013 Sunday Off"})),
+      el("datalist",{id:"noteList"},el("option",{value:"Plan Not Running - Sunday Off"}),el("option",{value:"Plan Not Running - Public Holiday"}),el("option",{value:"Plan Not Running - Repair Sludge Press Body"}))));
+  for(const g of GROUPS){
+    const card=el("div",{class:"stage"});
+    card.append(el("div",{class:"stage-h"},el("h2",{text:g.name}),el("span",{class:"step",text:g.step})));
+    if(g.info)card.append(el("div",{class:"stock-info",text:g.info.join(" \u00b7 ")}));
+    for(const p of P.filter(p=>p.g===g.id&&!p.calc)){
+      const row=el("div",{class:"prow"});
+      const lab=el("label",{for:"f_"+p.k},p.label);
+      if(p.unit)lab.append(el("span",{class:"u",text:p.unit}));
+      let input;
+      if(p.opts){input=el("select",{id:"f_"+p.k},el("option",{value:"",text:"Select…"}));p.opts.forEach(o=>input.append(el("option",{value:o,text:o})));}
+      else{input=el("input",{id:"f_"+p.k,type:"number",inputmode:"decimal",step:p.step,min:"0"});if(p.max!=null){input.setAttribute("max",String(p.max));input.setAttribute("placeholder","0.00 – "+p.max.toFixed(2))}
+        if(p.int){input.setAttribute("inputmode","numeric");input.setAttribute("placeholder","Whole number");input.addEventListener("keydown",e=>{if(e.key==="."||e.key===",")e.preventDefault()});input.addEventListener("blur",()=>{if(input.value!==""&&isFinite(+input.value)){input.value=String(Math.round(+input.value));refreshPills()}})}}
+      input.addEventListener("input",()=>{dirty=true;refreshPills()});
+      row.append(lab,input,el("span",{class:"pill",id:"pill_"+p.k,text:"—"}),el("span",{class:"hint",id:"hint_"+p.k}));
+      card.append(row);
+    }
+    if(g.id==="pond")card.append(el("div",{class:"hint",text:"Internal size "+POND_L.toFixed(2)+" m × "+POND_W.toFixed(2)+" m = "+POND_AREA.toFixed(2)+" m². Volume = area × water level."}));
+    if(g.id==="clr"||g.id==="fd"||g.id==="pond"||g.id==="wm"||g.id==="eq"||g.id==="fdm"){
+      const d=el("div",{class:"derived",id:"der_"+g.id});card.append(d);
+    }
+    (IETS_IDS.includes(g.id)?ietsGrid:KIT_IDS.includes(g.id)?kitGrid:CHEM_IDS.includes(g.id)?chemGrid:otherGrid).append(card);
+  }
+  ["f_by","f_rem","f_note","f_chk"].forEach(id=>$("#"+id).addEventListener("input",()=>{dirty=true}));
+}
+function readForm(){
+  const o={};
+  for(const p of P){if(p.calc)continue;const v=$("#f_"+p.k).value;o[p.k]=v===""?null:(p.opts?v:(p.int?Math.round(Number(v)):Number(v)));}
+  for(const p of P){if(p.calc)o[p.k]=p.calc==="wm"?meterUse($("#f_date").value,o.wm_read):vol(o[p.calc]);}
+  return o;
+}
+function refreshPills(){
+  const o=readForm();
+  for(const p of P){
+    if(p.calc)continue;
+    const s=status(p.k,o[p.k]);const pill=$("#pill_"+p.k);
+    pill.className="pill "+s;pill.textContent=PILL[s];
+    const lt=limitText(p.k);$("#hint_"+p.k).textContent=lt?("Limit "+lt):"";
+  }
+  const rem=(a,b)=>(a>0&&b!=null)?((a-b)/a*100):null;
+  const dc=$("#der_clr");dc.textContent="";
+  const r1=rem(o.inf_cod,o.clr_cod);
+  dc.append(el("div",{},"COD removal at clarifier",el("b",{text:r1==null?"—":r1.toFixed(1)+"%"})));
+  const dfd=$("#der_fd");dfd.textContent="";
+  const r2=rem(o.inf_cod,o.fd_cod);
+  dfd.append(el("div",{},"Overall COD removal",el("b",{text:r2==null?"—":r2.toFixed(1)+"%"})));
+  const fb=(o.inf_flow!=null&&o.fd_flow!=null)?(o.fd_flow-o.inf_flow):null;
+  dfd.append(el("div",{},"Discharge − influent flow",el("b",{text:fb==null?"—":(fb>0?"+":"")+fb.toFixed(1)+" m³/d"})));
+  ['pond_open','pond_close'].forEach(k=>{$("#pill_"+k).hidden=true;const mx=PK[k].max,h=$("#hint_"+k);
+    if(o[k]!=null&&o[k]>mx){h.textContent="Above maximum "+mx.toFixed(2)+" m – check the reading";h.style.color="var(--bad)";}
+    else{h.textContent=(o[k]==null?"":"= "+o[k+"_vol"].toFixed(2)+" m³ · ")+"Max "+mx.toFixed(2)+" m ("+vol(mx).toFixed(2)+" m³)";h.style.color="";}});
+  {const pv=prevMeter($("#f_date").value),h=$("#hint_wm_read");$("#pill_wm_read").hidden=true;
+   const low=pv&&o.wm_read!=null&&o.wm_read<pv.v;
+   h.textContent=pv?("Previous "+fmt("wm_read",pv.v)+" m³ on "+dmy(pv.date)+(low?" – new reading is lower, check the meter":"")):"No earlier reading yet – this one becomes the starting point";
+   h.style.color=low?"var(--bad)":"";
+   const dw=$("#der_wm");dw.textContent="";
+   const days=pv?Math.max(1,Math.round((new Date($("#f_date").value)-new Date(pv.date))/864e5)):null;
+   dw.append(el("div",{},"Water usage",el("b",{text:o.wm_use==null?"—":fmt("wm_use",o.wm_use)+" m³"})));
+   dw.append(el("div",{},"Days since last reading",el("b",{text:days==null?"—":String(days)})));
+   dw.append(el("div",{},"Average per day",el("b",{text:(o.wm_use==null||!days)?"—":fmt("wm_use",o.wm_use/days)+" m³/d"})));}
+  {const dt=$("#f_date").value;for(const b of INV_BASES){const ip=$("#f_"+b+"_bal");const a=autoBal(b,dt,o[b+"_in"],o[b+"_out"]);ip.placeholder=a==null?"Opening balance":"Auto: "+a;
+     const pb=prevBal(b,dt);$("#hint_"+b+"_bal").textContent=pb?("Previous "+pb.v+" on "+dmy(pb.date)):"No earlier balance \u2013 enter the opening balance";
+     const v=o[b+"_bal"]!=null?o[b+"_bal"]:a;const st=status(b+"_bal",v);const pl=$("#pill_"+b+"_bal");pl.className="pill "+st;pl.textContent=st==="bad"?"REORDER":st==="warn"?"LOW":st==="ok"?"OK":"\u2014";
+     ["_in","_out"].forEach(x=>{$("#pill_"+b+x).hidden=true;$("#hint_"+b+x).textContent=""})}}
+  {const dt=$("#f_date").value;$("#pill_fdm_read").hidden=true;$("#hint_fdm_read").textContent="Volume discharged for the day";
+   const ym=dt.slice(0,7);let mt=0,mn=0;LOGS.forEach((d,k)=>{if(k.startsWith(ym)&&k!==dt&&d.fdm_read!=null){mt+=+d.fdm_read;mn++}});if(o.fdm_read!=null){mt+=o.fdm_read;mn++}
+   const df=$("#der_fdm");df.textContent="";
+   df.append(el("div",{},"Discharged this month",el("b",{text:mn?fmt("fdm_read",mt)+" m³":"—"})));
+   df.append(el("div",{},"Days recorded this month",el("b",{text:String(mn)})));
+   df.append(el("div",{},"Average per recorded day",el("b",{text:mn?fmt("fdm_read",mt/mn)+" m³":"—"})));}
+  {const dt=$("#f_date").value;$("#pill_eq_read").hidden=true;$("#hint_eq_read").textContent="Volume of water put into the EQ tank for the day";
+   const ym=dt.slice(0,7);let mt=0,mn=0;LOGS.forEach((d,k)=>{if(k.startsWith(ym)&&k!==dt&&d.eq_read!=null){mt+=+d.eq_read;mn++}});if(o.eq_read!=null){mt+=o.eq_read;mn++}
+   const de=$("#der_eq");de.textContent="";
+   de.append(el("div",{},"Water input this month",el("b",{text:mn?fmt("eq_read",mt)+" m³":"—"})));
+   de.append(el("div",{},"Days recorded this month",el("b",{text:String(mn)})));
+   de.append(el("div",{},"Average per recorded day",el("b",{text:mn?fmt("eq_read",mt/mn)+" m³":"—"})));}
+  const dp=$("#der_pond");dp.textContent="";
+  const v1=o.pond_open_vol,v2=o.pond_close_vol;
+  dp.append(el("div",{},"Volume – opening",el("b",{text:v1==null?"—":v1.toFixed(2)+" m³"})));
+  dp.append(el("div",{},"Volume – closing",el("b",{text:v2==null?"—":v2.toFixed(2)+" m³"})));
+  const dv=(v1!=null&&v2!=null)?v2-v1:null;
+  dp.append(el("div",{},"Change (closing − opening)",el("b",{text:dv==null?"—":(dv>0?"+":"")+dv.toFixed(2)+" m³"})));
+}
+function fillForm(date){
+  const d=LOGS.get(date);
+  for(const p of P){if(!p.calc)$("#f_"+p.k).value=d&&d[p.k]!=null?d[p.k]:"";}
+  $("#f_time").value=d&&d.time||nowHM();
+  setBy(d&&d.recordedBy||"");
+  $("#f_rem").value=d&&d.remarks||"";$("#f_note").value=d&&d.inv_note||"";$("#f_chk").value=d&&d.chem_chk||"";
+  $("#loadedNote").textContent=d?("Saved record for "+dmy(date)+(d.updatedAt?" · last saved "+new Date(d.updatedAt).toLocaleString("en-GB",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"")+". Saving again overwrites it."):("No record yet for "+dmy(date)+".");
+  dirty=false;refreshPills();
+}
+
+/* ---------- status strip ---------- */
+function renderStrip(){
+  const today=isoToday();
+  let date=today,d=LOGS.get(today);
+  const hasFd=x=>x&&P.some(p=>p.g==="fd"&&x[p.k]!=null&&x[p.k]!=="");
+  if(!hasFd(d)){const ks=[...LOGS.keys()].sort().reverse().filter(k=>hasFd(LOGS.get(k)));if(ks.length){date=ks[0];d=LOGS.get(date)}else d=null}
+  $("#stripDate").textContent=d?("Final discharge · "+dmy(date)+(date!==today?" (latest record)":"")+(d.recordedBy?" · by "+d.recordedBy:"")):"";
+  const chips=$("#stripChips");chips.textContent="";
+  const v=$("#verdict");v.textContent="";
+  if(!d){v.className="verdict";v.append(el("span",{class:"dot",style:"color:var(--muted)"}),el("span",{text:"No reading recorded yet. Fill in Daily entry to start the log."}));return;}
+  let worst="ok";const rank={none:0,ok:1,warn:2,bad:3};
+  for(const p of P.filter(p=>p.g==="fd")){
+    const s=status(p.k,d[p.k]);if(rank[s]>rank[worst])worst=s;
+    const c=el("span",{class:"chip "+s},el("span",{class:"dot"}),p.label+" ",el("b",{text:fmt(p.k,d[p.k])+(p.unit&&!p.opts&&d[p.k]!=null&&p.unit!=="visual"?" "+p.unit:"")}));
+    chips.append(c);
+  }
+  const txt={ok:"Final discharge within limits",warn:"Final discharge near limit — watch closely",bad:"Final discharge over limit — action required"}[worst];
+  v.append(el("span",{class:"dot",style:"color:var(--"+worst+")"}),el("span",{text:txt}));
+  if(date!==today)v.append(el("span",{class:"sub",text:"· no entry yet for today"}));
+}
+
+/* ---------- history ---------- */
+function months(){
+  const s=new Set([isoToday().slice(0,7)]);LOGS.forEach((_,k)=>s.add(k.slice(0,7)));
+  return[...s].sort().reverse();
+}
+function renderMonthSelect(){
+  const sel=$("#h_month");const cur=sel.value;sel.textContent="";
+  months().forEach(m=>sel.append(el("option",{value:m,text:monthName(m)})));
+  if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+const SUBS={iets:{name:"IETS",groups:["inf","clr","aer","fd"]},water:{name:"Water Monitoring",groups:["fdm","pond","wm"]},fdm:{name:"IETS Final Discharge",groups:["fdm"]},pond:{name:"Retention Pond",groups:["pond"]},wm:{name:"Incoming Water Meter",groups:["wm"]},eq:{name:"EQ Tank Water Input",groups:["eq"]},kit:{name:"Testing Kit Inventory",groups:["kit15k","kit1500","kit160"]},chem:{name:"Chemical Usage",groups:["coag","poly","lime"]}};
+let histSub="iets";try{let s=localStorage.getItem("iets_hsub");if(["fdm","pond","wm"].includes(s))s="water";if(s&&SUBS[s])histSub=s}catch(e){}
+function setHistSub(s){if(["fdm","pond","wm"].includes(s))s="water";histSub=s;document.querySelectorAll(".subtabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.sub===s)));try{localStorage.setItem("iets_hsub",s)}catch(e){}renderHistory()}
+function renderHistory(){
+  document.querySelectorAll(".subtabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.sub===histSub)));
+  const sub=SUBS[histSub];const PS=P.filter(p=>sub.groups.includes(p.g));const inputKeys=PS.filter(p=>!p.calc).map(p=>p.k);
+  const m=$("#h_month").value||isoToday().slice(0,7);
+  const isInv=histSub==="kit"||histSub==="chem";
+  const rows=[...LOGS.entries()].filter(([k,d])=>k.startsWith(m)&&(inputKeys.some(k2=>d[k2]!=null&&d[k2]!=="")||(isInv&&d.inv_note))).sort((a,b)=>b[0]<a[0]?-1:1);
+  const host=$("#histBody");host.textContent="";
+  if(!rows.length){host.append(el("div",{class:"empty"},el("b",{text:"No "+sub.name+" readings for "+monthName(m)}),"Saved daily entries appear here, one row per day."));return;}
+  const wrap=el("div",{class:"tbl-wrap"});const t=el("table");
+  const h1=el("tr"),h2=el("tr");
+  h1.append(el("th",{class:"l",rowspan:"2",text:"Date"}),el("th",{class:"l",rowspan:"2",text:"Time"}),el("th",{class:"l",rowspan:"2",text:"By"}));
+  const extra=histSub==="pond"?{label:"Change (m³)",calc:d=>(d.pond_open_vol!=null&&d.pond_close_vol!=null)?d.pond_close_vol-d.pond_open_vol:null}:null;
+  for(const g of GROUPS.filter(g=>sub.groups.includes(g.id))){const ps=P.filter(p=>p.g===g.id);if(extra)ps.push({label:extra.label.replace(/ \(.*\)$/,""),unit:extra.label.match(/\((.*)\)/)[1],_x:1});h1.append(el("th",{class:"grp",colspan:String(ps.length),text:g.name}));ps.forEach(p=>h2.append(el("th",{text:p.label+(p.unit&&p.unit!=="visual"?" ("+p.unit+")":"")})));}
+  h1.append(el("th",{class:"l",rowspan:"2",text:"Remarks"}),el("th",{rowspan:"2",text:"Actions"}));
+  const th=el("thead");th.append(h1,h2);t.append(th);
+  const tb=el("tbody");
+  for(const[date,d]of rows){
+    const tr=el("tr");
+    tr.append(el("td",{class:"l",text:dmy(date)}),el("td",{class:"l",text:d.time||"—"}),el("td",{class:"l",style:"font-family:var(--f-body)",text:d.recordedBy||"—"}));
+    for(const p of PS){const v=rowVal(p.k,date,d);const s=status(p.k,v);const over=p.max!=null&&v!=null&&v>p.max;tr.append(el("td",{class:over?"bad":(s==="none"?"":s),text:fmt(p.k,v)}));}
+    if(extra){const x=extra.calc(d,date);tr.append(el("td",{text:x==null?"—":(histSub==="pond"&&x>0?"+":"")+x.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}))}
+    tr.append(el("td",{class:"rem",text:isInv?[d.inv_note,histSub==="chem"&&d.chem_chk?"Checked: "+d.chem_chk:""].filter(Boolean).join(" \u00b7 "):(d.remarks||"")}));
+    const open=()=>{$("#f_date").value=date;fillForm(date);selectTab("entry");window.scrollTo({top:0,behavior:"smooth"});$("#saveMsg").className="msg";$("#saveMsg").textContent="Editing "+dmy(date)+". Change the readings and tap Save reading."};
+    const act=el("div",{class:"act"});const cell=el("td",{},act);
+    const drawBtns=()=>{act.textContent="";tr.classList.remove("flash");
+      const eb=el("button",{type:"button",class:"ed",title:"Edit","aria-label":"Edit "+dmy(date)});eb.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;pointer-events:none"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';eb.addEventListener("click",open);
+      const db_=el("button",{type:"button",class:"del",text:"✕",title:"Delete","aria-label":"Delete "+sub.name+" readings for "+dmy(date)});
+      if(!canWrite){eb.disabled=true;db_.disabled=true;eb.title=db_.title="View-only access"}
+      db_.addEventListener("click",()=>{act.textContent="";tr.classList.add("flash");
+        const yes=el("button",{type:"button",class:"yes",text:"Yes, delete"}),no=el("button",{type:"button",text:"Cancel"});
+        act.append(el("span",{class:"q",text:"Delete "+sub.name+" for "+dmy(date)+"?"}),yes,no);no.addEventListener("click",drawBtns);yes.focus();
+        yes.addEventListener("click",async()=>{yes.disabled=no.disabled=true;yes.textContent="Deleting…";await deleteSection(date,histSub)})});
+      act.append(eb,db_)};
+    drawBtns();tr.append(cell);
+    tb.append(tr);
+  }
+  t.append(tb);wrap.append(t);host.append(wrap);
+  // summary row
+  const n=rows.length;const f2=x=>x.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const chips=el("div",{class:"chips",style:"margin-bottom:10px"},el("span",{class:"chip"},"Days logged ",el("b",{text:String(n)})));
+  if(histSub==="iets"){
+    let over=0;rows.forEach(([,d])=>{if(P.filter(p=>p.g==="fd").some(p=>status(p.k,d[p.k])==="bad"))over++});
+    const sumFlow=rows.reduce((a,[,d])=>a+(d.fd_flow||0),0);
+    chips.append(el("span",{class:"chip "+(over?"bad":"ok")},"Days with discharge exceedance ",el("b",{text:String(over)})),
+      el("span",{class:"chip"},"Total discharge ",el("b",{text:sumFlow.toLocaleString("en-GB",{maximumFractionDigits:1})+" m³"})));
+  }else if(histSub==="water"){
+    const fv=rows.map(([,d])=>d.fdm_read).filter(isFilled).map(Number),ft=fv.reduce((a,b)=>a+b,0);
+    chips.append(el("span",{class:"chip"},"Discharged this month ",el("b",{text:fv.length?f2(ft)+" m\u00b3":"\u2014"})));
+    const pv=rows.flatMap(([,d])=>[d.pond_open_vol,d.pond_close_vol]).filter(isFilled).map(Number);
+    if(pv.length){const hi=Math.max(...pv),cap=vol(0.59);chips.append(el("span",{class:"chip "+(hi>cap?"bad":hi>=cap*0.9?"warn":"ok")},"Highest pond volume ",el("b",{text:f2(hi)+" m\u00b3"})," of "+cap.toFixed(2)+" m\u00b3"))}
+    const us=rows.map(([date,d])=>meterUse(date,d.wm_read)).filter(v=>v!=null);
+    chips.append(el("span",{class:"chip"},"Water usage this month ",el("b",{text:us.length?f2(us.reduce((a,b)=>a+b,0))+" m\u00b3":"\u2014"})));
+    const lw=rows.find(([,d])=>isFilled(d.wm_read));if(lw)chips.append(el("span",{class:"chip"},"Latest meter reading ",el("b",{text:fmt("wm_read",lw[1].wm_read)+" m\u00b3"})));
+  }else if(histSub==="pond"){
+    const cl=rows.map(([,d])=>d.pond_close_vol).filter(v=>v!=null);
+    const lv=rows.flatMap(([,d])=>[d.pond_open,d.pond_close]).filter(v=>v!=null);
+    if(cl.length)chips.append(el("span",{class:"chip"},"Average closing volume ",el("b",{text:f2(cl.reduce((a,b)=>a+b,0)/cl.length)+" m³"})));
+    if(lv.length){const hi=Math.max(...lv);chips.append(el("span",{class:"chip "+(hi>=0.59*0.9?"warn":"ok")},"Highest level ",el("b",{text:hi.toFixed(2)+" m"})," of 0.59 m"))}
+  }else if(isInv){
+    const bases=histSub==="kit"?[["k15","COD 15000","pcs"],["k1500","COD 1500","pcs"],["k160","COD 160","pcs"]]:[["c","Coagulant","jar"],["p","Polymer","kg"],["l","Lime","bag"]];
+    for(const[b,l,u]of bases){const r=rows.find(([,d])=>d[b+"_bal"]!=null);if(!r)continue;const v=r[1][b+"_bal"],st=status(b+"_bal",v);
+      chips.append(el("span",{class:"chip "+(st==="none"?"":st)},l+" balance ",el("b",{text:fmt(b+"_bal",v)+" "+u}),st==="bad"?" \u00b7 REORDER":st==="warn"?" \u00b7 low":""))}
+    if(histSub==="chem"){const sum=k=>rows.reduce((a,[,d])=>a+(+d[k]||0),0);chips.append(el("span",{class:"chip"},"Used this month ",el("b",{text:sum("c_out")+" jar coagulant \u00b7 "+(sum("p_out")/1000).toFixed(1)+" kg polymer \u00b7 "+sum("l_out")+" bag lime"})))}
+    else{const sum=k=>rows.reduce((a,[,d])=>a+(+d[k]||0),0);chips.append(el("span",{class:"chip"},"Kits used this month ",el("b",{text:sum("k15_out")+" / "+sum("k1500_out")+" / "+sum("k160_out")+" pcs"})))}
+  }else if(histSub==="fdm"||histSub==="eq"){
+    const fk=histSub+"_read";const vs=rows.map(([,d])=>d[fk]).filter(v=>v!=null).map(Number);const tot=vs.reduce((a,b)=>a+b,0);
+    chips.append(el("span",{class:"chip"},(histSub==="eq"?"Water input this month ":"Discharged this month "),el("b",{text:vs.length?f2(tot)+" m³":"—"})),el("span",{class:"chip"},"Average per recorded day ",el("b",{text:vs.length?f2(tot/vs.length)+" m³":"—"})));
+  }else{
+    const mk=histSub+"_read";
+    const us=rows.map(([date,d])=>meterUse(date,d[mk],mk)).filter(v=>v!=null);
+    const tot=us.reduce((a,b)=>a+b,0);
+    chips.append(el("span",{class:"chip"},(histSub==="eq"?"Water input this month ":histSub==="fdm"?"Discharged this month ":"Water used this month "),el("b",{text:us.length?f2(tot)+" m³":"—"})));
+    const last=rows[0][1][mk];if(last!=null)chips.append(el("span",{class:"chip"},"Latest reading ",el("b",{text:fmt(mk,last)+" m³"})));
+  }
+  host.prepend(chips);
+}
+function buildRows(rows){
+  const head=["Date","Time","Recorded by",...P.map(p=>colName(p)+(p.unit&&p.unit!=="visual"?" ("+p.unit+")":"")),"Plant status / inventory remark","Checked by (engineer)","Remarks"];
+  return[head,...rows.map(([date,d])=>[dmy(date),d.time,d.recordedBy,...P.map(p=>{const v=rowVal(p.k,date,d);return v==null||v===""?null:v}),d.inv_note,d.chem_chk,d.remarks])];
+}
+function buildCsv(rows){
+  const head=["Date","Time","Recorded by",...P.map(p=>colName(p)+(p.unit&&p.unit!=="visual"?" ("+p.unit+")":"")),"Plant status / inventory remark","Checked by (engineer)","Remarks"];
+  const q=s=>{s=s==null?"":String(s);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const lines=[head.map(q).join(",")];
+  rows.forEach(([date,d])=>lines.push([dmy(date),d.time,d.recordedBy,...P.map(p=>rowVal(p.k,date,d)),d.inv_note,d.chem_chk,d.remarks].map(q).join(",")));
+  return lines.join("\n");
+}
+let lastBackup=null;
+function renderLastBackup(){const e=$("#bkLast");e.textContent="";if(!lastBackup||!lastBackup.at)return;
+  const t=new Date(lastBackup.at);e.append("Last backup: "+pad(t.getDate())+"-"+pad(t.getMonth()+1)+"-"+t.getFullYear()+" "+pad(t.getHours())+":"+pad(t.getMinutes())+(lastBackup.by?" by "+lastBackup.by:"")+(lastBackup.days?" · "+lastBackup.days+" days":"")+" ");
+  if(lastBackup.url)e.append(el("a",{href:lastBackup.url,target:"_blank",rel:"noopener",text:"Open file"}));}
+function folderId(u){u=String(u||"").trim();if(!u)return null;let m=u.match(/\/folders\/([A-Za-z0-9_-]{10,})/)||u.match(/[?&]id=([A-Za-z0-9_-]{10,})/)||u.match(/^([A-Za-z0-9_-]{20,})$/);return m?m[1]:false}
+async function runBackup(msgEl,btnEl){if(NO_CLOUD)return;
+  const msg=msgEl||$("#bkMsg");
+  const rows=[...LOGS.entries()].sort();
+  if(!rows.length){msg.className="msg";msg.textContent="There are no records to back up yet.";return}
+  const fid=folderId($("#bkFolder").value);
+  if(fid===false){msg.className="msg err";msg.textContent="That doesn't look like a Google Drive folder link. It should contain /folders/ followed by the folder ID.";return}
+  try{localStorage.setItem("iets_bkfolder",$("#bkFolder").value.trim())}catch(e){}
+  if(NO_CLOUD)return;
+  if(!mcp){msg.className="msg err";msg.textContent="Cloud backup isn't available in this view. Open the page in Claude, or use Export CSV.";return}
+  const now=new Date();const stamp=pad(now.getDate())+"-"+pad(now.getMonth()+1)+"-"+now.getFullYear()+" "+pad(now.getHours())+pad(now.getMinutes());
+  const title="IETS and Water Meter Daily Log backup "+stamp;
+  const args={title,textContent:buildCsv(rows),contentMimeType:"text/csv"};if(fid)args.parentId=fid;
+  const btn=btnEl||$("#bkGo");btn.disabled=true;msg.className="msg";msg.textContent="Saving backup to Google Drive…";
+  try{
+    const r=await mcp.callTool("Google Drive","create_file",args,{cache:false});
+    let p=r.payload;if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}
+    const id=p&&(p.id||p.fileId||(p.file&&p.file.id));
+    const url=(p&&(p.webViewLink||p.alternateLink||p.url))||(id?"https://drive.google.com/file/d/"+id+"/view":null);
+    msg.className="msg good";msg.textContent="Backup saved: "+title+" ("+rows.length+" days). ";
+    if(url)msg.append(el("a",{href:url,target:"_blank",rel:"noopener",text:"Open in Google Drive"}));
+    lastBackup={at:now.toISOString(),by:$("#f_by").value||null,days:rows.length,title,url};renderLastBackup();
+    if(db&&canWrite){try{await db.doc("meta/backup").set(lastBackup)}catch(e){}}
+  }catch(e){
+    const c=e&&e.code;msg.className="msg err";
+    msg.textContent=c==="server_not_connected"?"Add Google Drive in claude.ai Settings → Connectors, then try again."
+      :c==="needs_reauth"?"Reconnect Google Drive in claude.ai Settings → Connectors, then try again."
+      :c==="selection_required"?"Choose which Google Drive connection to use when Claude asks, then try again."
+      :(c==="not_in_manifest"||c==="approval_required")?"Google Drive wasn't allowed for this page. Tap Create backup copy again and allow it when asked."
+      :c==="blocked_by_policy"?"Your organisation doesn't allow Google Drive here. Use Export CSV instead."
+      :c==="tool_error"?"Google Drive couldn't create the file. If you used a folder link, check that you can add files to that folder."
+      :(c==="server_unavailable"||c==="upstream_error")?"Google Drive didn't confirm the backup. Check your Drive before trying again, so you don't get two copies."
+      :"Couldn't create the backup ("+(c||"error")+").";
+  }finally{btn.disabled=false}
+}
+let bkCfg=null,autoInfo=null,autoBusy=false;
+let syncFail=false;
+function setSync(state){setSyncOne(state,$("#syncStat"),$("#syncTxt"));setSyncOne(state,$("#syncStat2"),$("#syncTxt2"));setSyncOne(state,$("#syncStat3"),$("#syncTxt3"))}
+function setSyncOne(state,a,t){
+  if(!a||!t)return;
+  if(state==="busy"){a.className="sync busy";t.textContent="Google Sheet syncing…";return}
+  if(state==="fail")syncFail=true;else if(state==="ok")syncFail=false;
+  const at=autoInfo&&autoInfo.at?new Date(autoInfo.at):null;
+  if(autoInfo&&autoInfo.url)a.setAttribute("href",autoInfo.url);else a.removeAttribute("href");
+  if(syncFail){a.className="sync warn";t.textContent="Google Sheet sync failed"+(at?" · last "+pad(at.getHours())+":"+pad(at.getMinutes()):"");a.title="The last save didn't reach Google Drive. Readings are still saved in the log.";return}
+  if(at){const today=isoToday()===at.getFullYear()+"-"+pad(at.getMonth()+1)+"-"+pad(at.getDate());
+    a.className="sync ok";t.textContent="Google Sheet Synced "+pad(at.getHours())+":"+pad(at.getMinutes())+(today?"":" "+pad(at.getDate())+"-"+pad(at.getMonth()+1));a.title="Open the backup Google Sheet";}
+  else{a.className="sync";t.textContent="Google Sheet not synced";a.title="Set the backup folder under History → Back up";}
+}
+function renderAutoLast(){setSync("ok");if(!$("#pane-dash").hidden)renderDash();const e=$("#bkAutoLast");e.textContent="";if(!autoInfo||!autoInfo.at)return;const t=new Date(autoInfo.at);
+  e.append("Latest automatic backup: "+pad(t.getDate())+"-"+pad(t.getMonth()+1)+"-"+t.getFullYear()+" "+pad(t.getHours())+":"+pad(t.getMinutes())+(autoInfo.by?" by "+autoInfo.by:"")+(autoInfo.days?" · "+autoInfo.days+" days ":" "));
+  if(autoInfo.url)e.append(el("a",{href:autoInfo.url,target:"_blank",rel:"noopener",text:"Open file"}));}
+const DEFAULT_SHEET="https://docs.google.com/spreadsheets/d/1Z4Mo3Ys0tBQUsNVKXvgaI-pvULQfKW99cawJW95LyY4/edit";
+function sheetId(u){u=String(u||"").trim();if(!u)return null;const m=u.match(/\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/)||u.match(/^([A-Za-z0-9_-]{30,})$/);return m?m[1]:false}
+function cfgSheet(){return bkCfg&&bkCfg.sheet!=null?bkCfg.sheet:($("#bkSheet").value.trim()||DEFAULT_SHEET)}
+function showSheetLink(){const e=$("#bkSheetLink");e.textContent="";const id=sheetId($("#bkSheet").value);if(id)e.append(el("a",{href:"https://docs.google.com/spreadsheets/d/"+id+"/edit",target:"_blank",rel:"noopener",text:"Open the Google Sheet"}))}
+function applyCfg(){if(!bkCfg)return;if(document.activeElement!==$("#bkFolder"))$("#bkFolder").value=bkCfg.folder||"";if(document.activeElement!==$("#bkSheet")){$("#bkSheet").value=bkCfg.sheet!=null?bkCfg.sheet:DEFAULT_SHEET;showSheetLink()}$("#bkAuto").checked=bkCfg.auto!==false}
+async function saveCfg(){const f=$("#bkFolder").value.trim();if(folderId(f)===false)return false;
+  const sh=$("#bkSheet").value.trim();if(sh&&sheetId(sh)===false)return"sheet";
+  const next={folder:f,sheet:sh,auto:$("#bkAuto").checked};try{localStorage.setItem("iets_bkfolder",f)}catch(e){}
+  if(bkCfg&&bkCfg.folder===next.folder&&bkCfg.sheet===next.sheet&&(bkCfg.auto!==false)===next.auto)return true;
+  if(db&&canWrite){try{await db.doc("meta/backupcfg").set(next);bkCfg=next}catch(e){}}else bkCfg=next;return true}
+function autoOn(){return bkCfg?bkCfg.auto!==false:$("#bkAuto").checked}
+async function autoBackup(date,body,by,msg,force){if(NO_CLOUD)return;
+  if((!force&&!autoOn())||autoBusy)return;
+  const fid=folderId(bkCfg?bkCfg.folder:$("#bkFolder").value);if(fid===false)return;
+  if(NO_CLOUD)return;
+  const note=(t,cls)=>{const s=el("span",{class:cls,text:" "+t});msg.append(s)};
+  if(!mcp){note("Google Drive backup isn't available in this view.","");return}
+  autoBusy=true;const all=new Map(LOGS);if(date){if(body)all.set(date,body);else all.delete(date)}const rows=[...all.entries()].sort();
+  const sid=sheetId(cfgSheet());
+  const pending=el("span",{text:" Syncing to Google Sheet…"});msg.append(pending);setSync("busy");
+  if(sid){
+    try{
+      const values=buildRows(rows).map(r=>r.map(v=>v==null?"":v));
+      await mcp.callTool("Google Sheets","batch_clear_values",{spreadsheetId:sid,ranges:["A:AZ"]},{cache:false});
+      await mcp.callTool("Google Sheets","append_values",{spreadsheetId:sid,range:"A1",values},{cache:false});
+      autoInfo={fileId:sid,url:"https://docs.google.com/spreadsheets/d/"+sid+"/edit",at:new Date().toISOString(),by,days:rows.length};renderAutoLast();
+      if(db&&canWrite){try{await db.doc("meta/autobackup").set(autoInfo)}catch(e){}}
+      pending.textContent=" Synced to Google Sheet.";
+    }catch(e){const c=e&&e.code;pending.className="";pending.style.color="var(--warn)";setSync("fail");
+      pending.textContent=" The reading is saved, but the Google Sheet sync didn't complete: "+(c==="server_not_connected"?"add Google Sheets in claude.ai Settings → Connectors.":c==="needs_reauth"?"reconnect Google Sheets in claude.ai Settings → Connectors.":(c==="not_in_manifest"||c==="approval_required")?"Google Sheets wasn't allowed for this page. Allow it when asked on the next save.":c==="tool_error"?"check you have edit access to the Google Sheet.":c==="blocked_by_policy"?"your organisation doesn't allow Google Sheets here.":"Google Sheets didn't respond ("+(c||"error")+").")}
+    finally{autoBusy=false}
+    return;
+  }
+  const title="IETS and Water Meter Daily Log - latest backup";
+  const args={title,textContent:buildCsv(rows),contentMimeType:"text/csv"};if(fid)args.parentId=fid;
+  try{
+    const r=await mcp.callTool("Google Drive","create_file",args,{cache:false});
+    let p=r.payload;if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}
+    const id=p&&(p.id||p.fileId||(p.file&&p.file.id));const url=(p&&(p.webViewLink||p.alternateLink||p.url))||(id?"https://drive.google.com/file/d/"+id+"/view":null);
+    const prev=autoInfo&&autoInfo.fileId;
+    if(prev&&id&&prev!==id){try{await mcp.callTool("Google Drive","trash_file",{fileId:prev},{cache:false})}catch(e){}}
+    autoInfo={fileId:id||null,url,at:new Date().toISOString(),by,days:rows.length};renderAutoLast();
+    if(db&&canWrite){try{await db.doc("meta/autobackup").set(autoInfo)}catch(e){}}
+    pending.textContent=" Synced to Google Sheet.";
+  }catch(e){
+    const c=e&&e.code;
+    pending.className="";pending.style.color="var(--warn)";setSync("fail");
+    pending.textContent=" The reading is saved, but the Google Drive backup didn't complete: "+(c==="server_not_connected"?"add Google Drive in claude.ai Settings → Connectors.":c==="needs_reauth"?"reconnect Google Drive in claude.ai Settings → Connectors.":(c==="not_in_manifest"||c==="approval_required")?"Google Drive wasn't allowed for this page. Allow it when asked on the next save.":c==="tool_error"?"check you can add files to the backup folder.":c==="blocked_by_policy"?"your organisation doesn't allow Google Drive here.":"Google Drive didn't respond ("+(c||"error")+").");
+  }finally{autoBusy=false}
+}
+let autoLoaded=false,logsLoaded=false,catchT=null,catchTried="";
+function syncSig(){let latest="";LOGS.forEach(d=>{const u=d&&d.updatedAt;if(u&&u>latest)latest=u});return latest+"|"+LOGS.size}
+function needsCatchUp(){
+  if(!autoLoaded||!logsLoaded||!db||!canWrite||!autoOn()||!LOGS.size||autoBusy)return false;
+  if(folderId(bkCfg?bkCfg.folder:$("#bkFolder").value)===false)return false;
+  if(!autoInfo||!autoInfo.at)return true;
+  {const sid=sheetId(cfgSheet());if(sid&&autoInfo.fileId!==sid)return true}
+  let latest="";LOGS.forEach(d=>{const u=d&&d.updatedAt;if(u&&u>latest)latest=u});
+  return (latest&&new Date(latest)>new Date(autoInfo.at))||(autoInfo.days!=null&&autoInfo.days!==LOGS.size);
+}
+function scheduleCatchUp(){if(NO_CLOUD)return;clearTimeout(catchT);catchT=setTimeout(async()=>{
+  if(!needsCatchUp())return;const sig=syncSig();if(sig===catchTried)return;catchTried=sig;
+  const sink=el("span");await autoBackup(null,null,(user&&$("#f_by").value)||"Admin",sink,false);
+},6000)}
+async function deleteSection(date,subKey){
+  const msg=$("#csvMsg");const d=LOGS.get(date);if(!d||!db)return;
+  const sub=SUBS[subKey];const keys=P.filter(p=>sub.groups.includes(p.g)).map(p=>p.k);
+  const rest=P.filter(p=>!sub.groups.includes(p.g)&&!p.calc).some(p=>d[p.k]!=null&&d[p.k]!=="");
+  const ref=db.collection("logs").doc(date);
+  try{
+    let after=null;
+    if(rest){const patch={updatedAt:new Date().toISOString()};keys.forEach(k=>patch[k]=null);await ref.update(patch);after={...d,...patch};}
+    else await ref.delete();
+    msg.className="msg good";msg.textContent="Deleted "+sub.name+" readings for "+dmy(date)+(rest?" (other sections kept).":" (whole day removed).");
+    autoBackup(date,after,$("#f_by").value||"Admin",msg);
+  }catch(e){
+    msg.className="msg err";msg.textContent=sheetErr(e,"delete");renderHistory();
+  }
+}
+async function exportCsv(){
+  const m=$("#h_month").value;const rows=[...LOGS.entries()].filter(([k])=>k.startsWith(m)).sort();
+  const msg=$("#csvMsg");
+  if(!rows.length){msg.className="msg";msg.textContent="Nothing to export for this month.";return;}
+  const head=["Date","Time","Recorded by",...P.map(p=>colName(p)+(p.unit&&p.unit!=="visual"?" ("+p.unit+")":"")),"Remarks"];
+  const q=s=>{s=s==null?"":String(s);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const lines=[head.map(q).join(",")];
+  rows.forEach(([date,d])=>lines.push([dmy(date),d.time,d.recordedBy,...P.map(p=>rowVal(p.k,date,d)),d.remarks].map(q).join(",")));
+  if(!downloads){msg.className="msg err";msg.textContent="File export isn't available in this view.";return;}
+  try{await downloads.save({filename:"IETS-and-water-meter-daily-log-"+m+".csv",data:lines.join("\n")});msg.className="msg good";msg.textContent="CSV saved.";}
+  catch(e){msg.className="msg"+(e&&e.code==="declined"?"":" err");msg.textContent=e&&e.code==="declined"?"Export cancelled.":"Couldn't export the file ("+(e&&e.code||"error")+").";}
+}
+
+/* ---------- trends ---------- */
+let TRP=null;
+function renderTrends(){
+  TRP=null;
+  const host=$("#trendBody");host.textContent="";
+  let start,end,s0,e0;
+  if($("#t_range").value==="custom"){
+    const pd=v=>{const m=String(v||"").trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return null;let y=+m[3];if(y<100)y+=2000;const d=+m[1],mo=+m[2];const dt=new Date(y,mo-1,d);if(dt.getMonth()!==mo-1||dt.getDate()!==d)return null;return y+"-"+pad(mo)+"-"+pad(d)};
+    const fv=$("#t_from").value.trim(),tv=$("#t_to").value.trim();const f=pd(fv),t=pd(tv);
+    if((fv&&!f)||(tv&&!t)){host.append(el("div",{class:"empty"},el("b",{text:"Date not recognised"}),"Type the dates as dd/mm/yyyy, e.g. 01/10/2026."));return}
+    if(f)$("#t_from").value=dmy(f).replace(/-/g,"/");if(t)$("#t_to").value=dmy(t).replace(/-/g,"/");
+    if(!f||!t){host.append(el("div",{class:"empty"},el("b",{text:"Choose a From and To date"}),"Pick both dates to see the charts for that period."));return}
+    if(f>t){host.append(el("div",{class:"empty"},el("b",{text:"From date is after To date"}),"Check the dates and try again."));return}
+    s0=f;e0=t;start=new Date(f+"T00:00:00");end=new Date(t+"T00:00:00");
+  }else{
+    const days=+$("#t_range").value;
+    end=new Date();end.setHours(0,0,0,0);start=new Date(end);start.setDate(start.getDate()-(days-1));
+    s0=start.getFullYear()+"-"+pad(start.getMonth()+1)+"-"+pad(start.getDate());e0=isoToday();
+  }
+  const rows=[...LOGS.entries()].filter(([k])=>k>=s0&&k<=e0).sort((a,b)=>a[0]<b[0]?-1:1);
+  TRP={start,end,s0,e0,rows,label:$("#t_range").value==="custom"?"User define period":$("#t_range").selectedOptions[0].textContent};
+  if(!rows.length){host.append(el("div",{class:"empty"},el("b",{text:"No readings in this period"}),"Charts fill in as daily entries are saved."));return;}
+  const grid=el("div",{class:"charts"});
+  const order=["fd_cod","fd_tss","fd_ph","fd_flow","inf_cod","inf_ph","inf_flow","clr_cod","clr_tss","aer_sv30","aer_ph","fdm_read","pond_open_vol","pond_close_vol","wm_use","eq_read"];
+  const span=end-start||1;
+  for(const k of order){
+    const p=PK[k];const pts=rows.map(([date,d])=>({date,v:rowVal(k,date,d)})).filter(q=>q.v!=null&&isFinite(q.v)).map(q=>({date:q.date,v:+q.v}));
+    const g=GROUPS.find(g=>g.id===p.g).name;
+    const card=el("div",{class:"chart"});
+    const last=pts.length?pts[pts.length-1]:null;
+    const s=last?status(k,last.v):"none";
+    card.append(el("div",{class:"chart-h"},el("span",{class:"t",text:g+" · "+p.label+(p.unit?" ("+p.unit+")":"")})));
+    const W=320,H=130,ml=38,mr=8,mt=10,mb=20;
+    const L=LIM[k]||{};const lim=[L.min,L.max].filter(x=>x!=null&&x!=="").map(Number);
+    let vals=pts.map(x=>x.v).concat(lim);
+    if(!vals.length){card.append(el("div",{class:"sub",text:"No data in period"}));grid.append(card);continue;}
+    let lo=Math.min(...vals),hi=Math.max(...vals);
+    if(k.endsWith("_ph")){lo=Math.min(lo,5);hi=Math.max(hi,10);}else lo=Math.min(0,lo);
+    if(hi===lo)hi=lo+1;const padv=(hi-lo)*0.08;hi+=padv;if(!k.endsWith("_ph")&&lo===0){}else lo-=padv;
+    const x=dt=>ml+((new Date(dt+"T00:00:00")-start)/span)*(W-ml-mr);
+    const y=v=>mt+(1-(v-lo)/(hi-lo))*(H-mt-mb);
+    const NS="http://www.w3.org/2000/svg";
+    const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.setAttribute("role","img");svg.setAttribute("aria-label",g+" "+p.label+" trend");
+    const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const[kk,vv]of Object.entries(a))e.setAttribute(kk,vv);svg.append(e);return e};
+    // grid: 3 ticks
+    for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;const yy=y(v);mk("line",{x1:ml,x2:W-mr,y1:yy,y2:yy,stroke:"var(--line)","stroke-width":"1"});const tx=mk("text",{x:ml-5,y:yy+3,"text-anchor":"end"});tx.textContent=Math.abs(hi-lo)<10?v.toFixed(1):Math.round(v).toLocaleString("en-GB");}
+    // x labels: start / end
+    const xl=mk("text",{x:ml,y:H-5,"text-anchor":"start"});xl.textContent=dmy(s0).slice(0,5);
+    const xr=mk("text",{x:W-mr,y:H-5,"text-anchor":"end"});xr.textContent=dmy(e0).slice(0,5);
+    // limit lines
+    lim.forEach(l=>{const yy=y(l);mk("line",{x1:ml,x2:W-mr,y1:yy,y2:yy,stroke:"var(--limit)","stroke-width":"1.2","stroke-dasharray":"4 3"});const tl=mk("text",{x:W-mr,y:yy-3,"text-anchor":"end",style:"fill:var(--limit)"});tl.textContent="limit "+l;});
+    if(pts.length){
+      const d="M"+pts.map(q=>x(q.date).toFixed(1)+" "+y(q.v).toFixed(1)).join(" L");
+      if(pts.length>1){const base=y(Math.max(lo,0));mk("path",{d:d+" L"+x(pts[pts.length-1].date).toFixed(1)+" "+base+" L"+x(pts[0].date).toFixed(1)+" "+base+" Z",fill:"var(--chart)","fill-opacity":"0.08",stroke:"none"});}
+      mk("path",{d,fill:"none",stroke:"var(--chart)","stroke-width":"1.8","stroke-linejoin":"round"});
+      const dots=pts.map((q,i)=>{const st=status(k,q.v);const r0=st==="bad"?3:2,f0=st==="bad"?"var(--bad)":st==="warn"?"var(--warn)":"var(--chart)";const c=mk("circle",{cx:x(q.date),cy:y(q.v),r:r0,fill:f0,"pointer-events":"none"});c._r=r0;c._f=f0;return c});
+      const guide=mk("line",{x1:0,x2:0,y1:mt,y2:H-mb,stroke:"var(--sel)","stroke-width":"1","stroke-dasharray":"2 2",visibility:"hidden","pointer-events":"none"});
+      const tip=mk("g",{class:"tip",visibility:"hidden","pointer-events":"none"});
+      const tipBg=document.createElementNS(NS,"rect");tipBg.setAttribute("rx","4");tipBg.setAttribute("fill","var(--ink)");tip.append(tipBg);
+      const tipT=document.createElementNS(NS,"text");tipT.setAttribute("text-anchor","middle");tipT.setAttribute("style","fill:var(--bg);font-size:10px");tip.append(tipT);
+      const selLine=el("div",{class:"chart-sel",text:"Tap a point to see its value"});
+      let sel=-1;
+      const pick=i=>{
+        dots.forEach(c=>{c.setAttribute("r",c._r);c.setAttribute("fill",c._f);c.removeAttribute("stroke")});
+        if(i===sel||i<0){sel=-1;tip.setAttribute("visibility","hidden");guide.setAttribute("visibility","hidden");selLine.textContent="Tap a point to see its value";return}
+        sel=i;const q=pts[i],c=dots[i],cx=x(q.date),cy=y(q.v);
+        c.setAttribute("r","5");c.setAttribute("fill","var(--sel)");c.setAttribute("stroke","var(--panel)");c.setAttribute("stroke-width","1.5");svg.append(c);
+        guide.setAttribute("x1",cx);guide.setAttribute("x2",cx);guide.setAttribute("visibility","visible");
+        const label=fmt(k,q.v)+(p.unit?" "+p.unit:"");tipT.textContent=label;
+        const w=Math.max(34,label.length*6+12),h=16;let bx=Math.min(W-mr-w,Math.max(ml,cx-w/2)),by=cy-h-8;if(by<1)by=cy+8;
+        tipBg.setAttribute("x",bx);tipBg.setAttribute("y",by);tipBg.setAttribute("width",w);tipBg.setAttribute("height",h);
+        tipT.setAttribute("x",bx+w/2);tipT.setAttribute("y",by+11.5);
+        tip.setAttribute("visibility","visible");svg.append(tip);
+        selLine.textContent="";selLine.append(dmy(q.date)+" · ",el("b",{text:label}));
+      };
+      // tap targets: one vertical band per point, split halfway between neighbours
+      pts.forEach((q,i)=>{const cx=x(q.date),lx=i?(x(pts[i-1].date)+cx)/2:ml,rx=i<pts.length-1?(cx+x(pts[i+1].date))/2:W-mr;
+        const hr=mk("rect",{class:"hit",x:lx,y:mt,width:Math.max(2,rx-lx),height:H-mt-mb,fill:"transparent"});
+        const tt=document.createElementNS(NS,"title");tt.textContent=dmy(q.date)+": "+fmt(k,q.v);hr.append(tt);
+        hr.addEventListener("click",()=>pick(i))});
+      card.append(svg,selLine);grid.append(card);continue;
+    }
+    card.append(svg);grid.append(card);
+  }
+  host.append(grid);
+}
+
+/* ---------- limits ---------- */
+function renderLimits(){
+  const host=$("#limGrid");host.textContent="";
+  const wp=el("div",{class:"lim"},el("div",{class:"lbl",text:"Warning threshold"}),el("div",{class:"field"},el("label",{for:"lim_warn",text:"Amber at % of maximum limit"}),el("input",{id:"lim_warn",type:"number",min:"50",max:"100",step:"1"})));
+  host.append(wp);
+  for(const L of LIMIT_KEYS){
+    const p=PK[L.k];const g=GROUPS.find(g=>g.id===p.g).name;
+    const c=el("div",{class:"lim"},el("div",{},el("div",{style:"font-weight:700",text:g+" · "+p.label+(p.unit?" ("+p.unit+")":"")}),el("div",{class:"sub",text:L.note})));
+    const two=el("div",{class:"two"});
+    if(L.kind==="range")two.append(el("div",{class:"field"},el("label",{for:"lim_"+L.k+"_min",text:"Min"}),el("input",{id:"lim_"+L.k+"_min",type:"number",step:p.step})));
+    two.append(el("div",{class:"field"},el("label",{for:"lim_"+L.k+"_max",text:"Max"}),el("input",{id:"lim_"+L.k+"_max",type:"number",step:p.step})));
+    c.append(two);host.append(c);
+  }
+  host.append(el("div",{class:"lim"},el("div",{style:"font-weight:700",text:"Final Discharge · Colour & oil/grease (visual)"}),el("div",{class:"sub",text:"Colour: Cloudy = red. Oil & grease: Trace sheen = amber, Spot visible = red."})));
+  fillLimits();
+}
+function fillLimits(){
+  $("#lim_warn").value=LIM.warnPct??80;
+  for(const L of LIMIT_KEYS){const v=LIM[L.k]||{};if(L.kind==="range")$("#lim_"+L.k+"_min").value=v.min??"";$("#lim_"+L.k+"_max").value=v.max??"";}
+  const ro=!canAdmin;document.querySelectorAll("#pane-limits input,#pane-limits .btn").forEach(e=>e.disabled=ro);
+  $("#limRole").textContent=ro?"Only the owner can change limits.":(LIM.standard==="B"?"Compliance standard: Standard B":"Compliance standard: custom limits");
+}
+function readLimits(){
+  const n=v=>v===""?null:Number(v);const o={standard:LIM.standard||"custom",warnPct:n($("#lim_warn").value)??80};
+  for(const L of LIMIT_KEYS){o[L.k]={max:n($("#lim_"+L.k+"_max").value)};if(L.kind==="range")o[L.k].min=n($("#lim_"+L.k+"_min").value);}
+  return o;
+}
+function applyPreset(s){
+  for(const[k,v]of Object.entries(STD[s])){if(v.min!=null)$("#lim_"+k+"_min").value=v.min;$("#lim_"+k+"_max").value=v.max;}
+  LIM.standard=s;$("#limRole").textContent="Standard "+s+" values filled in. Save to apply.";
+}
+
+/* ---------- tabs ---------- */
+function selectTab(t){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
+  if(t==="dash"&&!isPhone())t="entry";
+  ["dash","entry","history","trends","limits","calib","settings","contact"].forEach(x=>{$("#pane-"+x).hidden=x!==t});
+  document.querySelectorAll("#bnav button").forEach(b=>b.classList.toggle("on",b.dataset.go===t||(b.dataset.go==="more"&&["limits","calib","settings","contact"].includes(t))));
+  document.querySelectorAll("#moreSheet button").forEach(b=>b.classList.toggle("on",b.dataset.go===t));
+  $("#moreSheet").hidden=true;
+  if(t==="dash")renderDash();
+  if(t==="calib")renderCalib();
+  if(t==="limits")renderCompliance();
+  if(t==="history"){renderMonthSelect();renderHistory();}
+  if(t==="trends")renderTrends();
+  try{localStorage.setItem("iets_tab_"+(isPhone()?"m":"p"),t)}catch(e){}
+}
+function isPhone(){return document.body.classList.contains("vm-mobile")}
+
+/* ---------- render all ---------- */
+function renderAll(){
+  renderStrip();
+  if(!$("#pane-limits").hidden)renderCompliance();
+  if(!dirty)fillForm($("#f_date").value);else refreshPills();
+  if(!$("#pane-history").hidden){renderMonthSelect();renderHistory();}
+  if(!$("#pane-trends").hidden)renderTrends();
+  if(!$("#pane-dash").hidden)renderDash();
+  if(!$("#pane-history").hidden&&!$("#rptPanel").hidden)renderReport();
+}
+
+/* ---------- save ---------- */
+async function save(){
+  const msg=$("#saveMsg");const date=$("#f_date").value;
+  if(!date){msg.className="msg err";msg.textContent="Pick a sampling date first.";return}
+  const by=$("#f_by").value.trim();
+  if(!by){msg.className="msg err";msg.textContent="Select who recorded this reading.";$("#f_by").focus();return}
+  const vals=readForm();
+  const invNote=$("#f_note").value.trim(),chk=$("#f_chk").value.trim();
+  if(P.every(p=>vals[p.k]==null)&&!invNote){msg.className="msg err";msg.textContent="Enter at least one reading (or a plant status remark) before saving.";return}
+  for(const b of INV_BASES){if(vals[b+"_bal"]==null&&(vals[b+"_in"]!=null||vals[b+"_out"]!=null)){const a=autoBal(b,date,vals[b+"_in"],vals[b+"_out"]);if(a!=null)vals[b+"_bal"]=a}}
+  {const pv=prevMeter(date);if(pv&&vals.wm_read!=null&&vals.wm_read<pv.v){msg.className="msg err";msg.textContent="Water meter reading is lower than the previous reading ("+fmt("wm_read",pv.v)+" m³ on "+dmy(pv.date)+"). Check the meter before saving.";$("#f_wm_read").focus();return}}
+  const tooHigh=P.filter(p=>p.max!=null&&vals[p.k]!=null&&vals[p.k]>p.max);
+  if(tooHigh.length){msg.className="msg err";msg.textContent="Retention pond "+tooHigh.map(p=>p.label.toLowerCase()).join(" and ")+" can't be more than "+tooHigh[0].max.toFixed(2)+" m. Check the reading.";$("#f_"+tooHigh[0].k).focus();return}
+  const over=P.filter(p=>p.g==="fd"&&status(p.k,vals[p.k])==="bad");
+  const rem=$("#f_rem").value.trim();
+  if(over.length&&!rem){msg.className="msg err";msg.textContent="Discharge "+over.map(p=>p.label).join(", ")+" over limit — add remarks and corrective action before saving.";$("#f_rem").focus();return}
+  if(!db){msg.className="msg err";msg.textContent="The shared log isn't connected in this view, so nothing was saved.";return}
+  const prev=LOGS.get(date);const time=prev&&prev.time?prev.time:nowHM();$("#f_time").value=time;
+  const body={date,time,recordedBy:by,remarks:rem||null,inv_note:invNote||null,chem_chk:chk||null,...vals,updatedAt:new Date().toISOString()};
+  const btn=$("#saveBtn");btn.disabled=true;msg.className="msg";msg.textContent="Saving…";
+  try{await db.collection("logs").doc(date).set(body);dirty=false;msg.className="msg good";msg.textContent="Saved reading for "+dmy(date)+".";try{localStorage.setItem("iets_by",by)}catch(e){}
+    autoBackup(date,body,by,msg);}
+  catch(e){
+    msg.className="msg err";
+    msg.textContent=sheetErr(e,"save the reading");
+  }finally{btn.disabled=!canWrite}
+}
+async function saveLimits(){
+  const msg=$("#limMsg");if(!db||!canAdmin){msg.className="msg err";msg.textContent="Only the owner can change limits. Sign in with the owner email.";return}
+  const o=readLimits();
+  try{await db.doc("settings/limits").set(o);msg.className="msg good";msg.textContent="Limits saved. Status colours now use these values.";}
+  catch(e){msg.className="msg err";msg.textContent="Couldn't save limits ("+(e&&e.code||"error")+").";}
+}
+
+/* ---------- import ---------- */
+let IMP=null,mcp=null;
+const norm=s=>String(s||"").toLowerCase().replace(/³/g,"3").replace(/\([^)]*\)?/g,"").replace(/&/g,"and").replace(/[^a-z0-9]/g,"");
+const normU=s=>String(s||"").toLowerCase().replace(/³/g,"3").replace(/&/g,"and").replace(/[^a-z0-9]/g,"");
+/* column name without repeating the section word, e.g. "Influent flowrate" not "Influent Influent flowrate" */
+function colName(p){const g=GROUPS.find(g=>g.id===p.g).name;const gw=g.split(/\s+/);const first=p.label.split(/\s+/)[0].toLowerCase();return gw[gw.length-1].toLowerCase()===first?gw.slice(0,-1).concat(p.label).join(" "):g+" "+p.label}
+function headerMap(){
+  const m={date:"date",samplingdate:"date",time:"time",samplingtime:"time",recordedby:"recordedBy",remarks:"remarks",remarksandcorrectiveaction:"remarks",remarkscorrectiveaction:"remarks",plantstatusinventoryremark:"inv_note",inventoryremark:"inv_note",plantstatus:"inv_note",checkedbyengineer:"chem_chk",checkedby:"chem_chk"};
+  const cnt={};P.forEach(p=>{const k=norm(p.label);cnt[k]=(cnt[k]||0)+1});
+  for(const p of P){const g=GROUPS.find(g=>g.id===p.g).name;const u=p.unit&&p.unit!=="visual"?" ("+p.unit+")":"";
+    [g+" "+p.label,colName(p),p.k,p.label.replace(/\s*–\s*/," ")+" "+g].forEach(n=>{m[norm(n)]=p.k;m[normU(n+u)]=p.k});
+    if(cnt[norm(p.label)]===1)m[norm(p.label)]=p.k;}
+  // common alternative wording
+  Object.assign(m,{influentflow:"inf_flow",inflow:"inf_flow",influentflowrate:"inf_flow",dischargeflow:"fd_flow",finaldischargeflow:"fd_flow",dischargeflowrate:"fd_flow",finaldischargeflowrate:"fd_flow",clarifierocd:"clr_cod",aerationsv30:"aer_sv30",sv30:"aer_sv30",oilandgrease:"fd_og",oilandgreasespot:"fd_og",color:"fd_color",colour:"fd_color",finaldischargecolor:"fd_color",mainwatermeterreading:"wm_read",incomingwatermeterreading:"wm_read",incomingwatermeter:"wm_read",incomingwatermetermeterreading:"wm_read",incomingwatermetermeterreading7am:"wm_read",retentionpondwaterlevelopening:"pond_open",retentionpondwaterlevelclosing:"pond_close",ietsfinaldischargefinaldischargevolumetoday:"fdm_read",ietsfinaldischarge:"fdm_read",ietsfinaldischargereading:"fdm_read",ietsfinaldischargemeterreading:"fdm_read",ietsfinaldischargefinaldischargemeterreading:"fdm_read",finaldischargemeterreading:"fdm_read",finaldischargemeter:"fdm_read",dischargemeterreading:"fdm_read",eqtank:"eq_read",eqtankreading:"eq_read",eqtankwaterinput:"eq_read",eqtankwaterinputwaterinputtoeqtanktoday:"eq_read",waterinputtoeqtankm3:"eq_read",eqtankwaterinputreading:"eq_read",watermetereqtank:"eq_read",waterinputtoeqtank:"eq_read",waterinputtoeqtankreading:"eq_read",eqreading:"eq_read",mainwatermeter:"wm_read",watermeterreading:"wm_read",meterreading:"wm_read"});
+  return m;
+}
+function matchHeader(hm,h){return hm[norm(h)]||hm[normU(h)]||null}
+function parseCsv(text){
+  text=text.replace(/^﻿/,"");const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===","){row.push(f);f=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(f);f="";if(row.some(x=>x!==""))rows.push(row);row=[]}
+    else f+=c}
+  row.push(f);if(row.some(x=>x!==""))rows.push(row);return rows;
+}
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+function parseDate(s){s=String(s||"").trim().replace(/\s+\d{1,2}:\d{2}(:\d{2})?\s*(am|pm)?$/i,"");let m,y,mo,d;
+  if(m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/)){y=+m[1];mo=+m[2];d=+m[3]}
+  else if(m=s.match(/^(\d{1,2})[-\/. ](\d{1,2})[-\/. ](\d{2}|\d{4})$/)){d=+m[1];mo=+m[2];y=+m[3]}
+  else if(m=s.match(/^(\d{1,2})[-\/. ]([A-Za-z]{3,9})[-\/. ,]*(\d{2}|\d{4})$/)){d=+m[1];mo=MON[m[2].toLowerCase().slice(0,m[2].toLowerCase().startsWith("sept")?4:3)];y=+m[3]}
+  else return null;
+  if(y<100)y+=2000; /* dd-mm-yy → dd-mm-20yy */
+  if(!mo||mo<1||mo>12||d<1||d>31)return null;
+  const t=new Date(y,mo-1,d);if(t.getMonth()!==mo-1)return null;
+  return y+"-"+pad(mo)+"-"+pad(d)}
+function buildImport(text,source){
+  const msg=$("#impMsg");const rows=parseCsv(text);
+  if(rows.length<2){msg.className="msg err";msg.textContent="That file has no data rows.";return}
+  const hm=headerMap();const cols=rows[0].map(h=>matchHeader(hm,h));
+  const unmatched=rows[0].filter((h,i)=>String(h).trim()&&!cols[i]);
+  const missing=P.filter(p=>!p.calc&&!cols.includes(p.k)).map(p=>colName(p));
+  if(!cols.includes("date")){msg.className="msg err";msg.textContent="No Date column found. Use the same column headings as Export CSV.";return}
+  const known=cols.filter(c=>c&&PK[c]&&!PK[c].calc).length;
+  if(!known){msg.className="msg err";msg.textContent="None of the reading columns matched. Use the same column headings as Export CSV.";return}
+  const recs=new Map();let bad=0;
+  for(const r of rows.slice(1)){
+    const o={};cols.forEach((k,i)=>{if(k)o[k]=r[i]==null?"":String(r[i]).trim()});
+    const date=parseDate(o.date);if(!date){bad++;continue}
+    const body={date,time:o.time||null,recordedBy:o.recordedBy||null,remarks:o.remarks||null,inv_note:o.inv_note||null,chem_chk:o.chem_chk||null};
+    for(const p of P){if(p.calc)continue;const v=o[p.k];
+      if(v==null||v===""||isDash(v)){body[p.k]=null;continue}
+      if(p.opts){const hit=p.opts.find(x=>x.toLowerCase()===v.toLowerCase());body[p.k]=hit||v}
+      else{const n=Number(v.replace(/,/g,""));body[p.k]=isFinite(n)?(p.int?Math.round(n):n):null}}
+    body.pond_open_vol=vol(body.pond_open);body.pond_close_vol=vol(body.pond_close);body.wm_use=null;
+    recs.set(date,body);
+  }
+  if(!recs.size){msg.className="msg err";msg.textContent="No rows had a valid date (dd-mm-yyyy).";return}
+  const dates=[...recs.keys()].sort();const exist=dates.filter(d=>LOGS.has(d)).length;
+  IMP={recs,source};
+  let addN=0,skipN=0,daysAdd=0,daysNone=0;
+  for(const r of recs.values()){const nf=newFields(r);const n=Object.keys(nf).filter(k=>!META_K.includes(k)).length;addN+=n;skipN+=countFilled(r)-n;if(n)daysAdd++;else daysNone++}
+  IMP.addN=addN;
+  msg.className="msg";msg.textContent="Read "+source+". Readings already recorded in History are skipped \u2013 only missing readings are added.";
+  const ch=$("#impChips");ch.textContent="";
+  ch.append(el("span",{class:"chip"},"Days in file ",el("b",{text:String(recs.size)})),
+    el("span",{class:"chip"},"From ",el("b",{text:dmy(dates[0])})," to ",el("b",{text:dmy(dates[dates.length-1])})),
+    el("span",{class:"chip ok"},"New readings to add ",el("b",{text:String(addN)})),
+    el("span",{class:"chip"},"Already recorded (skipped) ",el("b",{text:String(skipN)})),
+    el("span",{class:"chip"},"Days with something new ",el("b",{text:String(daysAdd)})));
+  if(daysNone)ch.append(el("span",{class:"chip"},"Days fully recorded already ",el("b",{text:String(daysNone)})));
+  if(bad)ch.append(el("span",{class:"chip bad"},"Rows skipped (bad date) ",el("b",{text:String(bad)})));
+  if(unmatched.length)ch.append(el("span",{class:"chip warn",style:"white-space:normal"},"Columns not recognised (ignored): ",el("b",{text:unmatched.join(", ")})));
+  if(missing.length&&missing.length<P.filter(p=>!p.calc).length)ch.append(el("span",{class:"chip",style:"white-space:normal"},"Not in file: ",el("b",{text:missing.join(", ")})));
+  $("#impNew").hidden=true;$("#impAll").disabled=!addN;$("#impAll").textContent=addN?"Add "+addN+" new reading"+(addN>1?"s":""):"Nothing new to add";
+  $("#impPreview").hidden=false;
+}
+function resetImport(){IMP=null;$("#impPreview").hidden=true;$("#impFile").value=""}
+const META_K=["date","updatedAt","importedAt","recordedBy","time","source","water_src","perf_src"];
+function isFilled(v){return v!=null&&v!==""&&!(typeof v==="number"&&isNaN(v))}
+function countFilled(r){return Object.entries(r).filter(([k,v])=>!META_K.includes(k)&&k!=="wm_use"&&isFilled(v)).length}
+/* fields from an imported record that are NOT yet recorded for that day */
+function newFields(r){const ex=LOGS.get(r.date)||{};const out={};
+  for(const[k,v]of Object.entries(r)){if(k==="date"||k==="wm_use"||!isFilled(v))continue;if(!isFilled(ex[k]))out[k]=v}
+  return out}
+async function runImport(overwrite){
+  const msg=$("#impMsg");if(!IMP)return;
+  if(!db||!canWrite){msg.className="msg err";msg.textContent="Sign in with an approved email to import readings.";return}
+  const list=[...IMP.recs.values()].filter(r=>Object.keys(newFields(r)).some(k=>!META_K.includes(k)));
+  if(!list.length){msg.className="msg";msg.textContent="Everything in this file is already recorded \u2013 nothing new to add.";return}
+  ["impAll","impNew","impCancel","impLoad"].forEach(id=>$("#"+id).disabled=true);
+  let ok=0,fail=0,code="";const now=new Date().toISOString();
+  for(const r of list){
+    msg.className="msg";msg.textContent="Importing "+(ok+fail+1)+" of "+list.length+"…";
+    try{const ex=LOGS.get(r.date);
+      if(ex){const patch={...newFields(r),updatedAt:now,importedAt:now};
+        await db.collection("logs").doc(r.date).update(patch)}
+      else await db.collection("logs").doc(r.date).set({...r,recordedBy:r.recordedBy||"Admin",updatedAt:now,importedAt:now});ok++}
+    catch(e){fail++;code=e&&e.code||"error";if(code!=="error")break}
+  }
+  ["impAll","impNew","impCancel","impLoad"].forEach(id=>$("#"+id).disabled=false);
+  if(fail){msg.className="msg err";msg.textContent="Imported "+ok+" day"+(ok===1?"":"s")+". Stopped after a save failed ("+(code==="invalid_argument"?"no permission to save":code==="quota_exceeded"?"the log is full":code)+").";}
+  else{msg.className="msg good";msg.textContent="Added "+(IMP.addN||0)+" new reading"+(IMP.addN===1?"":"s")+" across "+ok+" day"+(ok===1?"":"s")+" from "+IMP.source+". Readings already in History were left unchanged.";resetImport();}
+}
+function driveId(u){u=String(u||"").trim();let m=u.match(/\/d\/([A-Za-z0-9_-]{10,})/)||u.match(/[?&]id=([A-Za-z0-9_-]{10,})/)||u.match(/^([A-Za-z0-9_-]{20,})$/);return m?m[1]:null}
+function b64text(b){const bin=atob(b);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(u)}
+async function loadFromLink(){
+  const msg=$("#impMsg");resetImport();
+  const id=driveId($("#impUrl").value);
+  if(!id){msg.className="msg err";msg.textContent="Paste a Google Drive file link or Google Sheet link (it contains /d/ followed by the file ID).";return}
+  if(NO_CLOUD)return;
+  if(!mcp){msg.className="msg err";msg.textContent="Cloud links can't be opened in this view. Open the page in Claude, or download the file and use From this device.";return}
+  const btn=$("#impLoad");btn.disabled=true;msg.className="msg";msg.textContent="Opening the file from Google Drive…";
+  try{
+    const r=await mcp.callTool("Google Drive","download_file_content",{fileId:id,exportMimeType:"text/csv"},{cache:false});
+    let p=r.payload;if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}
+    if(!p||typeof p.content!=="string"){msg.className="msg err";msg.textContent="Google Drive returned no file content.";return}
+    const mt=String(p.mimeType||"");
+    if(mt&&!/csv|text\/plain/.test(mt)){msg.className="msg err";msg.textContent="That file is "+mt+". Use a .csv file or a Google Sheet. For Excel files, save as CSV first.";return}
+    buildImport(b64text(p.content),"“"+(p.title||"Google Drive file")+"”");
+  }catch(e){
+    const c=e&&e.code;msg.className="msg err";
+    msg.textContent=c==="server_not_connected"?"Add Google Drive in claude.ai Settings → Connectors, then try again."
+      :c==="needs_reauth"?"Reconnect Google Drive in claude.ai Settings → Connectors, then try again."
+      :c==="selection_required"?"Choose which Google Drive connection to use when Claude asks, then try again."
+      :(c==="not_in_manifest"||c==="approval_required")?"Google Drive wasn't allowed for this page. Tap Load from link again and allow it when asked."
+      :c==="blocked_by_policy"?"Your organisation doesn't allow Google Drive here. Download the file and use From this device."
+      :c==="tool_error"?"Couldn't open that file. Check the link and that your Google account can open it."
+      :c==="server_unavailable"?"Google Drive didn't respond. Try again in a moment."
+      :"Couldn't load the file ("+(c||"error")+").";
+  }finally{btn.disabled=false}
+}
+function loadFromFile(f){
+  const msg=$("#impMsg");resetImport();if(!f)return;
+  if(!/\.csv$/i.test(f.name)&&!/csv|text\/plain/.test(f.type)){msg.className="msg err";msg.textContent="Choose a .csv file. For Excel files, save as CSV first.";return}
+  const rd=new FileReader();rd.onload=()=>buildImport(String(rd.result||""),"“"+f.name+"”");rd.onerror=()=>{msg.className="msg err";msg.textContent="Couldn't read that file."};rd.readAsText(f);
+}
+
+/* ---------- phone dashboard ---------- */
+function renderDash(){
+  const host=$("#dashBody");if(!host)return;host.textContent="";
+  const dates=[...LOGS.keys()].sort().reverse();
+  const latest=k=>{for(const d of dates){const v=LOGS.get(d)[k];if(v!=null&&v!=="")return{date:d,v,d:LOGS.get(d)}}return null};
+  const card=(title,goTab,goLbl)=>{const c=el("div",{class:"pd-card"+(goTab?" tap":"")});const h=el("div",{class:"pd-h"},el("h3",{text:title}));if(goTab){h.append(el("span",{class:"go",text:(goLbl||"Open")+" ›"}));c.addEventListener("click",e=>{if(e.target.closest("button"))return;if(typeof goTab==="function")goTab();else selectTab(goTab);window.scrollTo(0,0)})}c.append(h);return c};
+  const row=(l,v,cls)=>el("div",{class:"pd-row"},el("span",{text:l}),el("b",{class:cls||"",text:v}));
+  // 1. Today
+  const td=isoToday(),rec=LOGS.get(td),now=new Date();
+  const c1=el("div",{class:"pd-card"});
+  const pill=rec?el("span",{class:"pill ok",text:"Saved"+(rec.time?" "+rec.time:"")+(rec.recordedBy?" · "+rec.recordedBy:"")}):el("span",{class:"pill warn",text:"Not recorded yet"});
+  c1.append(el("div",{class:"pd-today"},el("div",{},el("div",{class:"d",text:dmy(td)}),el("div",{class:"w",text:now.toLocaleDateString("en-GB",{weekday:"long"})+" · today's reading"})),pill));
+  const cta=el("button",{type:"button",class:"btn primary pd-cta",text:rec?"Edit today's reading":"Add today's reading"});
+  cta.addEventListener("click",()=>{$("#f_date").value=td;fillForm(td);selectTab("entry");window.scrollTo(0,0)});c1.append(cta);
+  {const sa=el("a",{class:"sync",id:"syncStat3",target:"_blank",rel:"noopener"},el("span",{class:"dot"}),el("span",{id:"syncTxt3",text:"Google Sheet not synced"}));c1.append(el("div",{class:"pd-sync"},sa));setSyncOne(autoBusy?"busy":"",sa,sa.lastChild);}
+  host.append(c1);
+  // 2. Final discharge vs Standard B
+  const c2=card("Final discharge · Standard B","limits","Compliance");const B=STD.B;let worst="none";const rank={none:0,ok:1,warn:2,bad:3};
+  const tiles=el("div",{class:"pd-tiles"});const wp=(LIM.warnPct||80)/100;
+  [["fd_cod","COD","mg/L"],["fd_tss","TSS","mg/L"],["fd_ph","pH",""]].forEach(([k,l,u])=>{const L=latest(k);const lim=B[k];let s="none",pct=null,limTxt;
+    if(lim.min!=null){limTxt=lim.min+"–"+lim.max;if(L){const v=+L.v;s=(v<lim.min||v>lim.max)?"bad":"ok";pct=(v-lim.min)/(lim.max-lim.min)*100}}
+    else{limTxt="≤ "+lim.max;if(L){const v=+L.v;pct=v/lim.max*100;s=v>lim.max?"bad":v>=lim.max*wp?"warn":"ok"}}
+    if(rank[s]>rank[worst])worst=s;
+    const bar=el("div",{class:"pd-bar "+s});const bi=el("i");bi.style.width=(pct==null?0:Math.max(3,Math.min(100,pct))).toFixed(0)+"%";bar.append(bi);
+    tiles.append(el("div",{class:"pd-tile"},el("span",{class:"l",text:l}),el("span",{class:"v "+(s==="none"?"":s),text:L?fmt(k,L.v):"—"}),bar,el("span",{class:"u",text:"Limit "+limTxt+(u?" "+u:"")})))});
+  const fdL=latest("fd_cod")||latest("fd_ph");
+  const vt={ok:"Complies with Standard B",warn:"Complies – near the limit",bad:"Not complying – action required",none:"No final discharge readings yet"}[worst];
+  c2.append(el("div",{class:"pd-verdict "+worst},el("span",{class:"dot"}),el("span",{text:vt+(fdL?" · "+dmy(fdL.date):"")})),tiles);
+  const col=latest("fd_color"),og=latest("fd_og"),fl=latest("fd_flow");
+  const g2=el("div",{});g2.append(row("Colour",col?col.v:"—",col?status("fd_color",col.v):""),row("Oil & grease spot",og?og.v:"—",og?status("fd_og",og.v):""),row("Discharge flowrate",fl?fmt("fd_flow",fl.v)+" m³/d":"—"));
+  c2.append(g2);host.append(c2);
+  // 3. IETS process
+  const c3=card("IETS process · latest",()=>{selectTab("history");setHistSub("iets")},"History");const g3=el("div",{class:"pd-grid2"});
+  [["inf_cod","Influent COD","mg/L"],["inf_ph","Influent pH",""],["inf_flow","Influent flow","m³/d"],["clr_cod","Clarifier COD","mg/L"],["clr_tss","Clarifier TSS","mg/L"],["aer_sv30","SV30","mL/L"],["aer_ph","Aeration pH",""]].forEach(([k,l,u])=>{const L=latest(k);const s=L?status(k,L.v):"none";g3.append(row(l,L?fmt(k,L.v)+(u?" "+u:""):"—",s==="none"?"":s))});
+  const ci=latest("inf_cod"),cf=latest("fd_cod");if(ci&&cf&&ci.date===cf.date&&+ci.v>0)g3.append(row("COD removal",((ci.v-cf.v)/ci.v*100).toFixed(1)+"%","ok"));
+  c3.append(g3);host.append(c3);
+  // 3b. IETS final discharge meter
+  const c3b=card("IETS final discharge (m³)",()=>{selectTab("history");setHistSub("fdm")},"History");const fm=latest("fdm_read");
+  if(fm){const ym=isoToday().slice(0,7);let mt=0,mn=0;LOGS.forEach((d,k)=>{if(k.startsWith(ym)&&d.fdm_read!=null){mt+=+d.fdm_read;mn++}});
+    c3b.append(el("div",{class:"pd-big"},fmt("fdm_read",fm.v)+" ",el("small",{text:"m³ · "+dmy(fm.date)})),
+      el("div",{},row("Discharged this month",mn?fmt("fdm_read",mt)+" m³":"—"),row("Average per recorded day",mn?fmt("fdm_read",mt/mn)+" m³":"—")))}
+  else c3b.append(el("div",{class:"sub",text:"No final discharge volumes yet."}));
+  host.append(c3b);
+  // 4. Retention pond
+  const c4=card("Retention pond",()=>{selectTab("history");setHistSub("pond")},"History");
+  const pc=latest("pond_close"),po=latest("pond_open");const P0=pc&&po?(pc.date>=po.date?{...pc,which:"closing"}:{...po,which:"opening"}):pc?{...pc,which:"closing"}:po?{...po,which:"opening"}:null;
+  const mx=PK.pond_close.max||0.59;
+  if(P0){const lv=+P0.v,pct=Math.max(0,Math.min(100,lv/mx*100));const tank=el("div",{class:"pd-tank"});const fill=el("i",{class:pct>=90?"warn":""});fill.style.height=pct.toFixed(0)+"%";tank.append(fill,el("b",{text:pct.toFixed(0)+"%"}));
+    c4.append(el("div",{class:"pd-pond"},tank,el("div",{},el("div",{class:"pd-big"},lv.toFixed(2)+" ",el("small",{text:"m of "+mx.toFixed(2)+" m"})),el("div",{},row("Volume",fmt("pond_close_vol",vol(lv))+" m³"),row("Reading",P0.which+" · "+dmy(P0.date)),row("Full capacity",vol(mx).toFixed(2)+" m³")))))}
+  else c4.append(el("div",{class:"sub",text:"No retention pond readings yet."}));
+  host.append(c4);
+  // 5. Water meter
+  const c5=card("Incoming water meter",()=>{selectTab("history");setHistSub("wm")},"History");const wm=latest("wm_read");
+  if(wm){const used=meterUse(wm.date,+wm.v),pv=prevMeter(wm.date),days=pv?Math.max(1,Math.round((new Date(wm.date)-new Date(pv.date))/864e5)):null;
+    const ym=isoToday().slice(0,7);let mt=0,mn=0;LOGS.forEach((d,k)=>{if(k.startsWith(ym)&&d.wm_read!=null){const u=meterUse(k,+d.wm_read);if(u!=null){mt+=u;mn++}}});
+    c5.append(el("div",{class:"pd-big"},fmt("wm_read",wm.v)+" ",el("small",{text:"m³ · "+dmy(wm.date)})),
+      el("div",{},row("Water usage",used==null?"—":fmt("wm_use",used)+" m³"),row("Average per day",used==null||!days?"—":fmt("wm_use",used/days)+" m³/d"),row("Used this month",mn?fmt("wm_use",mt)+" m³":"—")))}
+  else c5.append(el("div",{class:"sub",text:"No water meter readings yet."}));
+  host.append(c5);
+  const c5b=card("EQ tank water input",()=>{selectTab("history");setHistSub("eq")},"History");const eq=latest("eq_read");
+  if(eq){const ym=isoToday().slice(0,7);let mt=0,mn=0;LOGS.forEach((d,k)=>{if(k.startsWith(ym)&&d.eq_read!=null){mt+=+d.eq_read;mn++}});
+    c5b.append(el("div",{class:"pd-big"},fmt("eq_read",eq.v)+" ",el("small",{text:"m³ · "+dmy(eq.date)})),
+      el("div",{},row("Water input this month",mn?fmt("eq_read",mt)+" m³":"—"),row("Average per recorded day",mn?fmt("eq_read",mt/mn)+" m³":"—")))}
+  else c5b.append(el("div",{class:"sub",text:"No EQ tank water input yet."}));
+  host.append(c5b);
+  // 5c. Stock (testing kits & chemicals)
+  const c5c=card("Testing kits & chemicals",()=>{selectTab("history");setHistSub("chem")},"History");const g5=el("div",{class:"pd-grid2"});
+  [["k15","COD 15000 kit","pcs"],["k1500","COD 1500 kit","pcs"],["k160","COD 160 kit","pcs"],["c","Coagulant","jar"],["p","Polymer-Anion","kg"],["l","Lime","bag"]].forEach(([b,l,u])=>{const L=latest(b+"_bal");const st=L?status(b+"_bal",L.v):"none";
+    g5.append(row(l,L?fmt(b+"_bal",L.v)+" "+u+(st==="bad"?" \u00b7 reorder":""):"\u2014",st==="none"?"":st))});
+  c5c.append(g5);host.append(c5c);
+  // 6. Calibration & sync
+  const c6=card("Calibration","calib","Calibration");const list=[...CAL.values()].map(c=>({c,st:calStatus(c)}));
+  const over=list.filter(x=>x.st.s==="bad").length,soon=list.filter(x=>x.st.s==="warn").length;const nx=list.filter(x=>x.st.due&&x.st.s!=="bad").sort((a,b)=>a.st.due.localeCompare(b.st.due))[0];
+  c6.append(el("div",{},row("Instruments",String(list.length)),row("Overdue / failed",String(over),over?"bad":"ok"),row("Due within 30 days",String(soon),soon?"warn":""),row("Next calibration",nx?dmy(nx.st.due)+" · "+nx.c.name:"—")));
+  host.append(c6);
+}
+
+/* ---------- Standard B compliance ---------- */
+function renderCompliance(){
+  const host=$("#compBody");if(!host)return;host.textContent="";
+  const B=STD.B;const dates=[...LOGS.keys()].sort().reverse();
+  const latest=k=>{for(const d of dates){const v=LOGS.get(d)[k];if(v!=null&&v!=="")return{date:d,v}}return null};
+  const rows=[
+    {k:"fd_cod",label:"COD",unit:"mg/L",lim:B.fd_cod},
+    {k:"fd_tss",label:"TSS",unit:"mg/L",lim:B.fd_tss},
+    {k:"fd_ph",label:"pH",unit:"",lim:B.fd_ph},
+    {k:"fd_og",label:"Oil & grease",unit:"",vis:"Standard B 10 mg/L (lab test). Visual check here: None expected"},
+    {k:"fd_color",label:"Colour",unit:"",vis:"Visual check: Clean expected"}
+  ];
+  const wp=(LIM.warnPct||80)/100;let worst="ok",n=0;const rank={none:0,ok:1,warn:2,bad:3};
+  const wrap=el("div",{class:"tbl-wrap"}),t=el("table",{class:"comp-tbl"}),hr=el("tr");
+  ["Parameter","Standard B limit","Latest reading","Date","Margin","% of limit","Result"].forEach((h,i)=>hr.append(el("th",{class:i===0?"l":"",text:h})));
+  const th=el("thead");th.append(hr);t.append(th);const tb=el("tbody");
+  for(const r of rows){
+    const L=latest(r.k);let s="none",limTxt,margin="—",pct=null,res="No reading";
+    if(r.vis){limTxt=r.vis;if(L){s=status(r.k,L.v);res=s==="ok"?"Complies":s==="warn"?"Watch":"Check"}}
+    else if(r.lim.min!=null){limTxt=r.lim.min+" – "+r.lim.max;
+      if(L){const v=+L.v;if(v<r.lim.min||v>r.lim.max){s="bad";res="Exceeds";margin=Math.abs(v<r.lim.min?(v-r.lim.min):(v-r.lim.max)).toFixed(2)+(v<r.lim.min?" below minimum":" above maximum")}
+        else{const m=Math.min(v-r.lim.min,r.lim.max-v);s=m<(r.lim.max-r.lim.min)*0.05?"warn":"ok";res=s==="ok"?"Complies":"Complies (near edge)";margin=m.toFixed(2)+" from nearest limit"}}}
+    else{limTxt="≤ "+r.lim.max+(r.unit?" "+r.unit:"");
+      if(L){const v=+L.v;pct=v/r.lim.max*100;margin=(r.lim.max-v>=0?"":"+")+Math.abs(r.lim.max-v).toLocaleString("en-GB")+(r.unit?" "+r.unit:"")+(v>r.lim.max?" over":" below");
+        s=v>r.lim.max?"bad":v>=r.lim.max*wp?"warn":"ok";res=s==="bad"?"Exceeds":s==="warn"?"Complies (near limit)":"Complies"}}
+    if(L){n++;if(rank[s]>rank[worst])worst=s}
+    const pc=el("td");if(pct!=null){const mtr=el("div",{class:"meter "+s});const bar=el("i");bar.style.width=Math.min(100,pct).toFixed(0)+"%";mtr.append(bar);pc.append(el("div",{style:"display:flex;align-items:center;gap:8px;justify-content:center"},mtr,el("span",{text:pct.toFixed(0)+"%"})))}else pc.textContent="—";
+    tb.append(el("tr",{},el("td",{class:"l",style:"font-family:var(--f-body);font-weight:600",text:r.label+(r.unit?" ("+r.unit+")":"")}),el("td",{style:"white-space:normal;max-width:220px",text:limTxt}),
+      el("td",{class:s==="none"?"":s,text:L?fmt(r.k,L.v):"—"}),el("td",{text:L?dmy(L.date):"—"}),el("td",{text:margin}),pc,el("td",{},el("span",{class:"pill "+s,text:res}))));
+  }
+  t.append(tb);wrap.append(t);
+  const vt={ok:"Final discharge complies with Standard B",warn:"Complies with Standard B – some readings near the limit",bad:"Not complying with Standard B – action required",none:"No final discharge readings yet"}[n?worst:"none"];
+  host.append(el("div",{class:"comp-verdict"},el("span",{class:"dot",style:"color:var(--"+(n?worst:"muted")+")"}),el("span",{text:vt})),wrap);
+  $("#compSub").textContent="Compares the most recent saved value of each parameter with the Standard B limit. Amber = at "+(LIM.warnPct||80)+"% of the limit or more.";
+}
+
+/* ---------- calibration ---------- */
+let CAL=new Map(),calEdit=null;
+const CAL_SECS=["Influent","Clarifier","Aeration Tank","Final Discharge","Retention Pond","Incoming Water Meter","EQ Tank","Laboratory","Other"];
+const CAL_SUGGEST=[{name:"pH meter (laboratory)",section:"Laboratory",interval:3},{name:"COD reactor / spectrophotometer",section:"Laboratory",interval:12},{name:"Influent flowmeter",section:"Influent",interval:12},{name:"Final discharge flowmeter",section:"Final Discharge",interval:12},{name:"Incoming water meter",section:"Incoming Water Meter",interval:12},{name:"Retention pond level gauge",section:"Retention Pond",interval:12}];
+const CAL_FIELDS=[["name","cal_name"],["model","cal_model"],["serial","cal_serial"],["ctrl","cal_ctrl"],["eqId","cal_eq"],["range","cal_range"],["lastDate","cal_last"],["dueDate","cal_due"],["vendor","cal_vendor"],["lastBy","cal_by"],["certRef","cal_ref"],["remarks","cal_rem"]];
+function addMonths(iso,n){const[y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+n,d);if(t.getDate()!==d)t.setDate(0);return t.getFullYear()+"-"+pad(t.getMonth()+1)+"-"+pad(t.getDate())}
+function calDue(c){return c.dueDate||(c.lastDate&&c.interval?addMonths(c.lastDate,+c.interval):null)}
+function calStatus(c){
+  const due=calDue(c);
+  if(c.lastResult==="Fail")return{s:"bad",due,txt:"Failed"};
+  if(!due)return{s:"none",due:null,days:null,txt:"Not set"};
+  const days=Math.round((new Date(due)-new Date(isoToday()))/864e5);
+  return{s:days<0?"bad":days<=30?"warn":"ok",due,days,txt:days<0?"Overdue "+(-days)+" d":days===0?"Due today":days<=30?"Due in "+days+" d":"OK · "+days+" d left"}}
+function calMsg(t,c){const m=$("#calMsg");m.className="msg "+(c||"");m.textContent=t||""}
+function openCalForm(id){
+  calEdit=id||null;const c=id?CAL.get(id):{};$("#calForm").hidden=false;$("#calFormTitle").textContent=id?"Edit instrument":"Add instrument";
+  CAL_FIELDS.forEach(([k,i])=>$("#"+i).value=c[k]||"");$("#cal_sec").value=c.section||"Laboratory";$("#cal_int").value=c.interval||"";$("#calFormMsg").textContent="";
+  $("#cal_name").focus();$("#calForm").scrollIntoView({block:"nearest",behavior:"smooth"})}
+async function saveCalForm(){
+  const fm=$("#calFormMsg");const name=$("#cal_name").value.trim(),iv=$("#cal_int").value;
+  if(!name){fm.className="msg err";fm.textContent="Enter the instrument name.";$("#cal_name").focus();return}
+  if((!iv||+iv<1)&&!$("#cal_due").value){fm.className="msg err";fm.textContent="Enter the calibration interval, or the recalibration date from the certificate.";$("#cal_int").focus();return}
+  if(!db||!canWrite){fm.className="msg err";fm.textContent="Sign in with an approved email to change the calibration register.";return}
+  const old=calEdit?CAL.get(calEdit):null;const body={...(old||{})};
+  CAL_FIELDS.forEach(([k,i])=>{body[k]=$("#"+i).value.trim()||null});body.name=name;body.section=$("#cal_sec").value;body.interval=iv?Math.round(+iv):null;
+  body.lastResult=old?old.lastResult||null:null;body.history=old&&Array.isArray(old.history)?old.history:[];body.updatedAt=new Date().toISOString();
+  if(body.lastDate&&!body.history.some(h=>h.date===body.lastDate))body.history=[{date:body.lastDate,by:body.lastBy,ref:body.certRef,result:"Pass",due:body.dueDate,remarks:body.remarks}].concat(body.history).slice(0,100);
+  try{const ref=calEdit?db.collection("calib").doc(calEdit):db.collection("calib").doc();await ref.set(body);$("#calForm").hidden=true;calMsg((calEdit?"Updated ":"Added ")+name+".","good");calEdit=null}
+  catch(e){fm.className="msg err";fm.textContent="Couldn't save ("+(e&&e.code||"error")+")."}
+}
+async function addSuggested(){
+  if(!db||!canWrite){calMsg("Sign in with an approved email to change the calibration register.","err");return}
+  const now=new Date().toISOString();let n=0;
+  for(const s of CAL_SUGGEST){if([...CAL.values()].some(c=>c.name===s.name))continue;try{await db.collection("calib").doc().set({...s,lastDate:null,lastBy:null,certRef:null,remarks:null,lastResult:null,history:[],updatedAt:now});n++}catch(e){calMsg("Couldn't add instruments ("+(e&&e.code||"error")+").","err");return}}
+  calMsg("Added "+n+" instruments. Use the pencil to set each calibration date.","good")}
+function calDetails(c){
+  const d=el("div",{class:"cal-det"});
+  const row=(l,v)=>{if(v==null||v==="")return;d.append(el("div",{},el("span",{class:"k",text:l}),el("span",{class:"v",text:String(v)})))};
+  row("Instrument",c.name);row("Model",c.model);row("Serial no.",c.serial);row("Control no.",c.ctrl);row("Equipment ID",c.eqId);row("Capacity / range",c.range);row("Section",c.section);
+  row("Certificate no.",c.certRef);row("Reference no.",c.refNo);row("Calibration lab",c.vendor);row("Accreditation",c.accredited);
+  row("Date of receipt",c.receiptDate?dmy(c.receiptDate):null);row("Date of calibration",c.lastDate?dmy(c.lastDate):null);row("Recalibration date",calDue(c)?dmy(calDue(c)):null);row("Date of issue",c.issueDate?dmy(c.issueDate):null);
+  row("Condition before",c.condBefore);row("Condition after",c.condAfter);row("Location",c.location);row("Environment",c.env);row("Method",c.method);
+  row("Calibrated by",c.lastBy);row("Approved signatory",c.approvedBy);row("Reference standards",c.refStd);row("Remarks",c.remarks);
+  return d}
+function renderCalib(){
+  const host=$("#calBody");host.textContent="";$("#calAdd").disabled=!canWrite;
+  const list=[...CAL.entries()].map(([id,c])=>({id,c,st:calStatus(c)}));
+  if(!list.length){
+    const e=el("div",{class:"empty"},el("b",{text:"No instruments in the calibration register yet"}),"Add the meters and lab equipment you calibrate, with their last calibration date and interval.");
+    if(canWrite){const b=el("button",{class:"btn sm",type:"button",style:"margin-top:12px",text:"Add typical IETS instruments"});b.addEventListener("click",addSuggested);e.append(el("div",{},b),el("div",{class:"sub",style:"margin-top:6px",text:"pH meter, COD reactor, influent and discharge flowmeters, incoming water meter, pond level gauge — dates left blank for you to fill in."}))}
+    host.append(e);return}
+  const rank={bad:0,warn:1,ok:2,none:3};
+  list.sort((a,b)=>rank[a.st.s]-rank[b.st.s]||String(a.st.due||"9").localeCompare(String(b.st.due||"9"))||a.c.name.localeCompare(b.c.name));
+  const over=list.filter(x=>x.st.s==="bad").length,soon=list.filter(x=>x.st.s==="warn").length,unset=list.filter(x=>x.st.s==="none").length;
+  const next=list.find(x=>x.st.due&&x.st.s!=="bad");
+  const chips=el("div",{class:"chips",style:"margin-bottom:10px"},el("span",{class:"chip"},"Instruments ",el("b",{text:String(list.length)})),
+    el("span",{class:"chip "+(over?"bad":"ok")},"Overdue / failed ",el("b",{text:String(over)})),el("span",{class:"chip "+(soon?"warn":"")},"Due within 30 days ",el("b",{text:String(soon)})));
+  if(next)chips.append(el("span",{class:"chip"},"Next due ",el("b",{text:dmy(next.st.due)})," · "+next.c.name));
+  if(unset)chips.append(el("span",{class:"chip"},"No date set ",el("b",{text:String(unset)})));
+  host.append(chips);
+  const wrap=el("div",{class:"tbl-wrap"}),t=el("table"),hr=el("tr");
+  ["Instrument","Serial / control no.","Capacity / range","Section","Calibrated","Recalibration due","Status","Certificate no.","Actions"].forEach(h=>hr.append(el("th",{text:h})));
+  const th=el("thead");th.append(hr);t.append(th);const tb=el("tbody");const NC=9;
+  for(const{id,c,st}of list){
+    const tr=el("tr");const nb=el("button",{type:"button",class:"cal-name",text:c.name,"aria-expanded":"false"});
+    const ncell=el("td",{},nb);if(c.model)ncell.append(el("div",{class:"sub",text:c.model}));
+    const sc=el("td",{},el("div",{text:c.serial||"—"}));if(c.ctrl)sc.append(el("div",{class:"sub",text:c.ctrl}));
+    const cc=el("td",{},el("div",{text:c.lastDate?dmy(c.lastDate):"—"}));if(c.lastBy||c.vendor)cc.append(el("div",{class:"sub",text:c.vendor?c.vendor.replace(/\s*\(Malaysia\).*$/i,""):c.lastBy}));
+    tr.append(ncell,sc,el("td",{text:c.range||"—"}),el("td",{text:c.section||"—"}),cc,
+      el("td",{class:st.s==="none"?"":st.s,text:st.due?dmy(st.due):"—"}),
+      el("td",{},el("span",{class:"pill "+st.s,text:st.txt})),el("td",{},el("div",{text:c.certRef||"—"}),c.accredited?el("div",{class:"sub",text:c.accredited}):null));
+    const act=el("div",{class:"act"}),cell=el("td",{},act);tr.append(cell);
+    let sub=null;const closeSub=()=>{if(sub){sub.remove();sub=null;nb.setAttribute("aria-expanded","false")}};
+    const showHist=()=>{if(sub&&sub._k==="h"){closeSub();return}closeSub();sub=el("tr",{class:"sub-row"});sub._k="h";const td=el("td",{colspan:String(NC)});
+      td.append(el("div",{class:"lbl",style:"margin-bottom:6px",text:"Certificate details – "+c.name}),calDetails(c));
+      const hl=el("div",{class:"hist-list"});const h=Array.isArray(c.history)?c.history:[];if(!h.length)hl.append(el("div",{class:"sub",text:"No calibration history recorded yet."}));
+      h.forEach(x=>hl.append(el("div",{},el("b",{text:dmy(x.date)}),el("span",{class:"pill "+(x.result==="Fail"?"bad":x.result==="Adjusted"?"warn":"ok"),text:x.result||"Pass"}),el("span",{text:"By "+(x.by||"—")}),el("span",{text:"Cert "+(x.ref||"—")}),x.due?el("span",{text:"Due "+dmy(x.due)}):null,x.remarks?el("span",{class:"sub",text:x.remarks}):null)));
+      td.append(el("div",{class:"lbl",style:"margin:12px 0 6px",text:"Calibration history"}),hl);sub.append(td);tr.after(sub);nb.setAttribute("aria-expanded","true")};
+    nb.addEventListener("click",showHist);
+    const showRec=()=>{if(sub&&sub._k==="r"){closeSub();return}closeSub();sub=el("tr",{class:"sub-row"});sub._k="r";const td=el("td",{colspan:String(NC)});
+      const f=el("div",{class:"inline-form"});const di=el("input",{type:"date",id:"rc_date_"+id});di.value=isoToday();
+      const du=el("input",{type:"date",id:"rc_due_"+id});
+      const bi=el("input",{type:"text",id:"rc_by_"+id,list:"calByList",placeholder:"Technician name"});bi.value=$("#f_by").value||"";
+      const rs=el("select",{id:"rc_res_"+id});["Pass","Adjusted","Fail"].forEach(o=>rs.append(el("option",{value:o,text:o})));
+      const ri=el("input",{type:"text",id:"rc_ref_"+id,placeholder:"Optional"}),mi=el("input",{type:"text",id:"rc_rem_"+id,placeholder:"Optional"});
+      const fld=(l,i)=>el("div",{class:"field"},el("label",{for:i.id,text:l}),i);
+      const sv=el("button",{type:"button",class:"btn primary sm",text:"Save calibration"}),cn=el("button",{type:"button",class:"btn sm",text:"Cancel"}),ms=el("span",{class:"msg"});
+      f.append(fld("Date of calibration",di),fld("Recalibration date",du),fld("Calibrated by",bi),fld("Result",rs),fld("Certificate no.",ri),fld("Remarks",mi),el("div",{class:"actions"},sv,cn,ms));
+      cn.addEventListener("click",closeSub);
+      sv.addEventListener("click",async()=>{
+        if(!di.value){ms.className="msg err";ms.textContent="Pick the calibration date.";return}
+        if(!bi.value.trim()){ms.className="msg err";ms.textContent="Enter who calibrated it.";bi.focus();return}
+        if(rs.value==="Fail"&&!mi.value.trim()){ms.className="msg err";ms.textContent="Add remarks for a failed calibration (what was found, what happens next).";mi.focus();return}
+        const entry={date:di.value,due:du.value||null,by:bi.value.trim(),ref:ri.value.trim()||null,result:rs.value,remarks:mi.value.trim()||null,at:new Date().toISOString()};
+        const h=[entry].concat(Array.isArray(c.history)?c.history:[]).sort((a,b)=>a.date<b.date?1:-1).slice(0,100);
+        const latest=h[0];const patch={history:h,lastResult:latest.result,updatedAt:entry.at};
+        if(latest.result!=="Fail"){patch.lastDate=latest.date;patch.lastBy=latest.by;patch.certRef=latest.ref;patch.dueDate=latest.due||null}
+        sv.disabled=true;try{await db.collection("calib").doc(id).update(patch);calMsg("Recorded calibration of "+c.name+" on "+dmy(entry.date)+".","good")}catch(e){sv.disabled=false;ms.className="msg err";ms.textContent="Couldn't save ("+(e&&e.code||"error")+")."}
+      });
+      td.append(el("div",{class:"lbl",style:"margin-bottom:6px",text:"Record calibration – "+c.name}),f);sub.append(td);tr.after(sub);di.focus()};
+    const draw=()=>{act.textContent="";tr.classList.remove("flash");
+      const rb=el("button",{type:"button",class:"rec",title:"Record calibration","aria-label":"Record calibration of "+c.name,text:"✓ Record"});rb.addEventListener("click",showRec);
+      const eb=el("button",{type:"button",class:"ed",title:"Edit","aria-label":"Edit "+c.name});eb.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;pointer-events:none"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';eb.addEventListener("click",()=>openCalForm(id));
+      const xb=el("button",{type:"button",class:"del",title:"Delete","aria-label":"Delete "+c.name,text:"✕"});
+      xb.addEventListener("click",()=>{act.textContent="";tr.classList.add("flash");const y=el("button",{type:"button",class:"yes",text:"Yes, delete"}),n=el("button",{type:"button",text:"Cancel"});
+        act.append(el("span",{class:"q",text:"Delete "+c.name+"?"}),y,n);n.addEventListener("click",draw);
+        y.addEventListener("click",async()=>{y.disabled=n.disabled=true;try{await db.collection("calib").doc(id).delete();calMsg("Deleted "+c.name+".","good")}catch(e){calMsg("Couldn't delete ("+(e&&e.code||"error")+").","err");draw()}})});
+      if(!canWrite){rb.disabled=eb.disabled=xb.disabled=true}
+      act.append(rb,eb,xb)};
+    draw();tb.append(tr);
+  }
+  t.append(tb);wrap.append(t);host.append(wrap);
+}
+CAL_SECS.forEach(s=>$("#cal_sec").append(el("option",{value:s,text:s})));
+$("#calAdd").addEventListener("click",()=>openCalForm(null));
+document.querySelectorAll(".ct-copy").forEach(b=>b.addEventListener("click",()=>{const t=b.dataset.copy;const done=()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy",1500)};
+  const sel=()=>{const v=b.parentNode.querySelector(".v");const r=document.createRange();r.selectNodeContents(v);const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Selected – copy it now"};
+  try{navigator.clipboard.writeText(t).then(done,sel)}catch(e){sel()}}));
+$("#calCancel").addEventListener("click",()=>{$("#calForm").hidden=true;calEdit=null});
+$("#calSave").addEventListener("click",saveCalForm);
+
+/* ---------- monthly report (paper-form layout) ---------- */
+const RPT_CSS=`.rp{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:11px}
+.rp .rp-co{display:flex;flex-direction:row;align-items:center;gap:10px;margin-bottom:6px}.rp .rp-co img{height:44px;width:auto}.rp .rp-cn{display:flex;flex-direction:column;justify-content:center;height:44px}.rp .rp-cn b{font-size:17px;line-height:24px;font-weight:700;color:#111}.rp .rp-cn span{font-size:12px;line-height:20px;font-weight:600;color:#555}
+.rp table{border-collapse:collapse;width:100%;min-width:760px}.rp td,.rp th{border:1px solid #333;padding:3px 5px;text-align:center;font-weight:400;height:18px}
+.rp th{font-weight:700;background:#f2f2f2;color:#111;text-transform:none;letter-spacing:0;font-size:11px}.rp td{color:#111}.rp td.l,.rp th.l{text-align:left}.rp .t{font-weight:700;font-size:12px}
+.rp td.note{font-style:italic;text-align:left;padding-left:12px}.rp .red{color:#c00;font-weight:700}
+.rp .ttl{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:2px solid #111;padding:4px 0 6px;margin:2px 0 8px;font-size:15px;font-weight:700;letter-spacing:.02em}.rp .ttl span:last-child{font-size:12px;font-weight:400}
+.rp table.chem{table-layout:fixed;min-width:900px}.rp table.wtr{min-width:520px;max-width:760px}.rp table.wtr td{height:24px;font-size:12px}
+.rp .rp-foot{margin-top:28px;display:grid;grid-template-columns:max-content 300px;justify-content:start;align-items:end;gap:22px 12px;font-size:12px}.rp .ln{border-bottom:1px solid #333;height:34px}`;
+function rptDays(m){const[y,mo]=m.split("-").map(Number);const n=new Date(y,mo,0).getDate();return Array.from({length:n},(_,i)=>m+"-"+String(i+1).padStart(2,"0"))}
+function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function rptCell(k,d){const v=d?d[k]:null;if(v==null||v==="")return"<td></td>";const st=/_bal$/.test(k)?status(k,v):"none";
+  let t=fmt(k,v);if(k==="p_out")t=v+"g";if(k==="p_bal"||k==="p_in")t=fmt(k,v)+"kg";return"<td"+(st==="bad"?' class="red"':"")+">"+esc(t)+"</td>"}
+function buildReport(type,m){
+  const logo=($(".logo")||{}).src||"";const mon=new Date(m+"-01T00:00:00").toLocaleString("en-GB",{month:"long",year:"numeric"});
+  let h='<div class="rp"><div class="rp-co">'+(logo?'<img src="'+logo+'" alt="Lam Soon">':"")+'<div class="rp-cn"><b>LAM SOON EDIBLE OILS SDN BHD (CO.NO.14578-T)</b><span>(TELOK PANGLIMA GARANG FACTORY)</span></div></div>';
+  const days=rptDays(m);
+  const TITLES={water:"IETS WATER MONITORING DAILY RECORD",kit:"IETS TESTING KIT INVENTORY",chem:"IETS CHEMICAL INVENTORY"};
+  h+='<div class="ttl"><span>'+TITLES[type]+'</span><span>Month: <b>'+esc(mon)+'</b></span></div>';
+  if(type==="water"){
+    const vcell=(v,dec,cls)=>'<td'+(cls?' class="'+cls+'"':"")+'>'+(v==null||v===""?"":esc(Number(v).toLocaleString("en-GB",{minimumFractionDigits:0,maximumFractionDigits:dec})))+'</td>';
+    h+='<table class="wtr"><tr><th rowspan="2" style="width:22%">Date</th><th rowspan="2">IETS final discharge<br>(m3)</th><th colspan="2">Retention pond volume (m3)</th><th>Incoming water<br>meter (m3)</th><th rowspan="2">Water input to<br>EQ tank (m3)</th></tr><tr><th>7am</th><th>7pm</th><th>7am</th></tr>';
+    let tf=0,nf=0,te=0,ne=0;
+    for(const dt of days){const d=LOGS.get(dt);
+      const has=d&&["fdm_read","pond_open","pond_close","wm_read","pond_open_vol","pond_close_vol","eq_read"].some(k=>d[k]!=null&&d[k]!=="");
+      h+='<tr><td>'+dmy(dt)+'</td>';
+      if(d&&!has&&d.inv_note){h+='<td class="note" colspan="5">'+esc(d.inv_note)+'</td></tr>';continue}
+      const ov=d?(d.pond_open_vol!=null?d.pond_open_vol:vol(d.pond_open)):null,cv=d?(d.pond_close_vol!=null?d.pond_close_vol:vol(d.pond_close)):null;
+      if(d&&d.fdm_read!=null){tf+=+d.fdm_read;nf++}
+      if(d&&d.eq_read!=null){te+=+d.eq_read;ne++}
+      h+=vcell(d&&d.fdm_read,2)+vcell(ov,2,ov!=null&&ov>vol(0.59)+1e-9?"red":"")+vcell(cv,2,cv!=null&&cv>vol(0.59)+1e-9?"red":"")+vcell(d&&d.wm_read,2)+vcell(d&&d.eq_read,2)+'</tr>'}
+    h+='<tr><th>Total / month</th><th>'+(nf?Number(tf.toLocaleString?tf:tf).toLocaleString("en-GB",{maximumFractionDigits:2}):"")+'</th><th colspan="2" class="l" style="font-weight:400">Pond capacity '+vol(0.59).toFixed(2)+' m3 (0.59 m)</th><th></th><th>'+(ne?te.toLocaleString("en-GB",{maximumFractionDigits:2}):"")+'</th></tr></table>';
+  }else if(type==="kit"){
+    const kits=[["k15","COD 15000 mg/l"],["k1500","COD 1500 mg/l"],["k160","COD 160 mg/l"]];
+    h+='<table><tr><td>Monthly Usage</td>'+kits.map(()=>'<td colspan="3">Monthly usage 30pcs</td>').join("")+'<th rowspan="5">Technician<br>(Sign)</th></tr>';
+    h+='<tr><td>Triggering to order QTY</td>'+kits.map(()=>'<td colspan="3">Minimum Stock level 20pcs</td>').join("")+'</tr>';
+    h+='<tr><td>Minimum order QTY</td>'+kits.map(()=>'<td colspan="3">Order Quantity 160pcs</td>').join("")+'</tr>';
+    h+='<tr><th rowspan="2">Date</th>'+kits.map(k=>'<th colspan="3">'+k[1]+'</th>').join("")+'</tr><tr>'+kits.map(()=>'<th>In</th><th>Out</th><th>Balance</th>').join("")+'</tr>';
+    for(const dt of days){const d=LOGS.get(dt);const has=d&&kits.some(([b])=>["_in","_out","_bal"].some(x=>d[b+x]!=null));
+      h+='<tr><td>'+dmy(dt)+'</td>';
+      if(d&&!has&&d.inv_note)h+='<td class="note" colspan="9">'+esc(d.inv_note)+'</td>';
+      else h+=kits.map(([b])=>rptCell(b+"_in",d)+rptCell(b+"_out",d)+rptCell(b+"_bal",d)).join("");
+      h+='<td>'+(d&&(has||d.inv_note)?esc(d.recordedBy||""):"")+'</td></tr>'}
+    h+='</table>';
+  }else{
+    h+='<table class="chem"><colgroup><col style="width:13%">'+'<col style="width:7.5%">'.repeat(9)+'<col style="width:19.5%"></colgroup><tr><td>Monthly usage</td><td colspan="3">Average 32 JAR</td><td colspan="3">Average 15 JAR</td><td colspan="3">Average 5 BAG</td><th rowspan="4">DONE BY:<br>TECHNICIAN</th></tr>';
+    h+='<tr><td>Minimum Stock Level</td><td colspan="3">25 (can last for 20 days)</td><td colspan="3">10 (can last for 15 days)</td><td colspan="3">5 (can last for 30 days)</td></tr>';
+    h+='<tr><td>Minimum order QTY</td><td colspan="3">50 Jar</td><td colspan="3">20 Jar</td><td colspan="3">15 Bag</td></tr>';
+    h+='<tr><td>Stock Code</td><td colspan="3">W1AB01011</td><td colspan="3">W1AB01012</td><td colspan="3">W1AB01013</td></tr>';
+    h+='<tr><th rowspan="2">DATE</th><th colspan="3">COAGULANT (JAR)</th><th colspan="3">POLYMER-ANION (JAR)</th><th colspan="3">LIME (BAG)</th><th rowspan="2"></th></tr>';
+    h+='<tr>'+[0,1,2].map(()=>'<th>IN</th><th>OUT</th><th>BALANCE</th>').join("")+'</tr>';
+    const ch=[["c"],["p"],["l"]];
+    for(const dt of days){const d=LOGS.get(dt);const has=d&&ch.some(([b])=>["_in","_out","_bal"].some(x=>d[b+x]!=null));
+      h+='<tr><td>'+dmy(dt)+'</td>';
+      if(d&&!has&&d.inv_note)h+='<td class="note" colspan="9">'+esc(d.inv_note)+'</td>';
+      else h+=ch.map(([b])=>rptCell(b+"_in",d)+rptCell(b+"_out",d)+rptCell(b+"_bal",d)).join("");
+      h+='<td>'+(d&&(has||d.inv_note)?esc(d.recordedBy||""):"")+'</td></tr>'}
+    h+='</table>';
+  }
+  h+='<div class="rp-foot"><span>Verified By :</span><span class="ln"></span><span>Name :</span><span class="ln"></span><span>Date :</span><span class="ln"></span></div>';
+  h+='<div style="margin-top:8px;font-size:9px;color:#666">'+dmy(isoToday())+' '+nowHM()+' · '+TITLES[type]+'</div></div>';
+  return h;
+}
+function renderReport(){const m=$("#h_month").value||isoToday().slice(0,7);$("#rptPaper").innerHTML="<style>"+RPT_CSS+"</style>"+buildReport($("#rptType").value,m)}
+function reportDoc(){const m=$("#h_month").value||isoToday().slice(0,7);const t=$("#rptType").value;
+  const title=(t==="water"?"IETS Water Monitoring":t==="kit"?"IETS Testing Kit Inventory":"IETS Chemical Inventory")+" - "+new Date(m+"-01T00:00:00").toLocaleString("en-GB",{month:"long",year:"numeric"});
+  return{title,m,t,html:'<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>body{margin:24px}@page{size:A4 '+(t==="kit"?"portrait":"landscape")+';margin:12mm}'+RPT_CSS+'</style></head><body>'+buildReport(t,m)+'</body></html>'}}
+let rptReturn=null;
+function rptClose(){const pnl=$("#rptPanel");pnl.hidden=true;$("#rptBtn").setAttribute("aria-expanded","false");
+  const r=rptReturn;rptReturn=null;if(r){if(r.tab&&$("#pane-"+r.tab).hidden)selectTab(r.tab);if(r.sub&&r.sub!==histSub)setHistSub(r.sub);window.scrollTo({top:r.y||0,behavior:"smooth"})}else window.scrollTo({top:0,behavior:"smooth"})}
+$("#rptBack").addEventListener("click",rptClose);
+$("#rptBtn").addEventListener("click",()=>{const pnl=$("#rptPanel");if(pnl.hidden)rptReturn={tab:"history",sub:histSub,y:window.scrollY};pnl.hidden=!pnl.hidden;$("#rptBtn").setAttribute("aria-expanded",String(!pnl.hidden));if(!pnl.hidden){renderReport();$("#rptMsg").textContent="";pnl.scrollIntoView({block:"nearest",behavior:"smooth"})}});
+$("#rptType").addEventListener("change",renderReport);
+$("#h_month").addEventListener("change",()=>{if(!$("#rptPanel").hidden)renderReport()});
+/* ---------- PDF output (html2canvas + jsPDF, loaded on first use) ---------- */
+let pdfLibs=null;
+function loadScript(src){return new Promise((res,rej)=>{const sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error("load"));document.head.appendChild(sc)})}
+function getPdfLibs(){if(!pdfLibs)pdfLibs=(async()=>{
+  if(!window.html2canvas)await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  if(!(window.jspdf&&window.jspdf.jsPDF))await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  return{h2c:window.html2canvas,jsPDF:window.jspdf.jsPDF}})().catch(e=>{pdfLibs=null;throw e});return pdfLibs}
+async function makeReportPdf(){
+  const r=reportDoc();const{h2c,jsPDF}=await getPdfLibs();
+  const box=document.createElement("div");box.className="pdfbox";
+  box.style.cssText="position:fixed;left:-12000px;top:0;width:max-content;min-width:794px;background:#ffffff;color:#111111;padding:0;z-index:-1";
+  box.innerHTML="<style>"+RPT_CSS+".pdfbox .rp table{min-width:0!important;max-width:none!important}.pdfbox .rp table.wtr{width:100%}.pdfbox .rp table.chem{width:1000px}</style>"+buildReport(r.t,r.m);
+  document.body.appendChild(box);
+  try{
+    const imgs=[...box.querySelectorAll("img")];await Promise.all(imgs.map(i=>i.complete?0:new Promise(z=>{i.onload=i.onerror=z})));
+    const bw=Math.max(794,Math.ceil(box.scrollWidth));box.style.width=bw+"px";
+    const cv=await h2c(box,{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false,width:bw,windowWidth:bw+40});
+    const doc=new jsPDF({orientation:"portrait",unit:"pt",format:"a4",compress:true});
+    const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=28;
+    const k=Math.min((pw-2*m)/cv.width,(ph-2*m)/cv.height);const w=cv.width*k,h=cv.height*k;
+    doc.addImage(cv.toDataURL("image/jpeg",0.9),"JPEG",(pw-w)/2,m,w,h,undefined,"FAST");
+    doc.setProperties({title:r.title,subject:r.title,creator:"IETS and Water Meter Daily Log",author:"Lam Soon Edible Oils Sdn. Bhd."});
+    return{doc,title:r.title,file:r.title.replace(/[^A-Za-z0-9 -]/g,"").replace(/\s+/g,"-")+".pdf"};
+  }finally{box.remove()}
+}
+function pdfErr(e){return e&&e.message==="load"?"Couldn't load the PDF tools. Check the internet connection and try again.":"Couldn't create the PDF ("+((e&&(e.code||e.message))||"error")+")."}
+$("#rptDl").addEventListener("click",async()=>{const msg=$("#rptMsg"),btn=$("#rptDl");
+  if(!downloads){msg.className="msg err";msg.textContent="Downloads aren't available in this view.";return}
+  btn.disabled=true;msg.className="msg";msg.textContent="Creating PDF…";
+  try{const p=await makeReportPdf();msg.textContent="Saving PDF…";
+    await downloads.save({filename:p.file,data:p.doc.output("blob")});msg.className="msg good";msg.textContent="PDF saved: "+p.file}
+  catch(e){if(e&&e.code==="declined"){msg.className="msg";msg.textContent="Download cancelled."}else{msg.className="msg err";msg.textContent=e&&e.code?"Couldn't save the PDF ("+e.code+").":pdfErr(e)}}
+  finally{btn.disabled=false}});
+$("#rptDrive").addEventListener("click",async()=>{const msg=$("#rptMsg");const btn=$("#rptDrive");
+  if(NO_CLOUD)return;
+  if(!mcp){msg.className="msg err";msg.textContent="Google Drive isn't available in this view. Use Download PDF instead.";return}
+  btn.disabled=true;msg.className="msg";msg.textContent="Creating PDF…";
+  try{const p=await makeReportPdf();const b64=p.doc.output("datauristring").split(",")[1];
+    const fid=folderId(bkCfg?bkCfg.folder:$("#bkFolder").value);const args={title:p.file,base64Content:b64,contentMimeType:"application/pdf",disableConversionToGoogleType:true};if(fid)args.parentId=fid;
+    msg.textContent="Saving PDF to Google Drive…";
+    const res=await mcp.callTool("Google Drive","create_file",args,{cache:false});let q=res.payload;if(typeof q==="string"){try{q=JSON.parse(q)}catch(e){}}
+    const id=q&&(q.id||q.fileId);const url=(q&&(q.webViewLink||q.url))||(id?"https://drive.google.com/file/d/"+id+"/view":null);
+    msg.className="msg good";msg.textContent="PDF saved to Google Drive: "+p.file+" ";if(url)msg.append(el("a",{href:url,target:"_blank",rel:"noopener",text:"Open"}))}
+  catch(e){const c=e&&e.code;msg.className="msg err";msg.textContent=c==="server_not_connected"?"Add Google Drive in claude.ai Settings → Connectors.":c==="needs_reauth"?"Reconnect Google Drive in claude.ai Settings → Connectors.":(c==="not_in_manifest"||c==="approval_required")?"Google Drive wasn't allowed for this page. Try again and allow it.":c?"Couldn't save to Google Drive ("+c+").":pdfErr(e)}
+  finally{btn.disabled=false}});
+
+/* ---------- Trends: Create PDF of the charts ---------- */
+const TR_ORDER=["fd_cod","fd_tss","fd_ph","fd_flow","inf_cod","inf_ph","inf_flow","clr_cod","clr_tss","aer_sv30","aer_ph","fdm_read","pond_open_vol","pond_close_vol","wm_use","eq_read"];
+function trChartSvg(k,pts,D){
+  const W=360,H=150,ml=40,mr=8,mt=12,mb=20;const span=(D.end-D.start)||1;
+  const L=LIM[k]||{};const lim=[L.min,L.max].filter(x=>x!=null&&x!=="").map(Number);let vals=pts.map(q=>q.v).concat(lim);
+  let s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" font-family="Arial" font-size="10"><rect width="'+W+'" height="'+H+'" fill="#ffffff"/>';
+  if(!pts.length)return s+'<text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="#888">No readings in this period</text></svg>';
+  let lo=Math.min(...vals),hi=Math.max(...vals);
+  if(k.endsWith("_ph")){lo=Math.min(lo,5);hi=Math.max(hi,10)}else lo=Math.min(0,lo);
+  if(hi===lo)hi=lo+1;const pv=(hi-lo)*0.08;hi+=pv;if(k.endsWith("_ph"))lo-=pv;
+  const x=dt=>ml+((new Date(dt+"T00:00:00")-D.start)/span)*(W-ml-mr),y=v=>mt+(1-(v-lo)/(hi-lo))*(H-mt-mb);
+  for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3,yy=y(v);s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'" stroke="#d6e0dd"/><text x="'+(ml-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="#5b6d69">'+(Math.abs(hi-lo)<10?v.toFixed(1):Math.round(v).toLocaleString("en-GB"))+'</text>'}
+  s+='<text x="'+ml+'" y="'+(H-5)+'" fill="#5b6d69">'+dmy(D.s0).slice(0,5)+'</text><text x="'+(W-mr)+'" y="'+(H-5)+'" text-anchor="end" fill="#5b6d69">'+dmy(D.e0).slice(0,5)+'</text>';
+  lim.forEach(l=>{const yy=y(l);s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'" stroke="#b3261e" stroke-width="1.2" stroke-dasharray="4 3"/><text x="'+(W-mr)+'" y="'+(yy-3).toFixed(1)+'" text-anchor="end" fill="#b3261e">limit '+l+'</text>'});
+  if(pts.length>1){const base=y(Math.max(lo,0)).toFixed(1);const d="M"+pts.map(q=>x(q.date).toFixed(1)+" "+y(q.v).toFixed(1)).join(" L");s+='<path d="'+d+' L'+x(pts[pts.length-1].date).toFixed(1)+' '+base+' L'+x(pts[0].date).toFixed(1)+' '+base+' Z" fill="#0d6e63" fill-opacity="0.08"/><path d="'+d+'" fill="none" stroke="#0d6e63" stroke-width="1.8" stroke-linejoin="round"/>'}
+  pts.forEach(q=>{const st=status(k,q.v);s+='<circle cx="'+x(q.date).toFixed(1)+'" cy="'+y(q.v).toFixed(1)+'" r="'+(st==="bad"?3:2.2)+'" fill="'+(st==="bad"?"#b3261e":st==="warn"?"#9a6300":"#0d6e63")+'"/>'});
+  return s+'</svg>';
+}
+const TR_CSS='.trp{width:794px;box-sizing:border-box;padding:30px 32px;background:#fff}.trp .ttl{margin-bottom:12px}.trp .cg{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}.trp .cc{border:1px solid #c9d1d3;border-radius:6px;padding:6px 8px}.trp .cc .h{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;margin-bottom:2px}.trp .cc .h .bad{color:#c00}.trp .cc img{width:100%;height:auto;display:block}.trp .pf{margin-top:14px;font-size:9px;color:#666;display:flex;justify-content:space-between}';
+function trPdfPages(D){
+  const logo=($(".logo")||{}).src||"";const period=dmy(D.s0).replace(/-/g,"/")+" to "+dmy(D.e0).replace(/-/g,"/");const title="IETS TRENDS";
+  const head='<div class="rp-co">'+(logo?'<img src="'+logo+'" alt="Lam Soon">':"")+'<div class="rp-cn"><b>LAM SOON EDIBLE OILS SDN BHD (CO.NO.14578-T)</b><span>(TELOK PANGLIMA GARANG FACTORY)</span></div></div><div class="ttl"><span>'+title+'</span><span>Period: <b>'+esc(period)+'</b></span></div>';
+  const cards=TR_ORDER.filter(k=>PK[k]).map(k=>{const p=PK[k];const g=GROUPS.find(g=>g.id===p.g).name;
+    const pts=D.rows.map(([date,d])=>({date,v:rowVal(k,date,d)})).filter(q=>q.v!=null&&q.v!==""&&isFinite(q.v)).map(q=>({date:q.date,v:+q.v}));
+    const last=pts.length?pts[pts.length-1]:null;const st=last?status(k,last.v):"none";const u=p.unit&&p.unit!=="visual"?" ("+p.unit+")":"";
+    return'<div class="cc"><div class="h"><span>'+esc(g+" · "+p.label+u)+'</span></div><img alt="" src="data:image/svg+xml;charset=utf-8,'+encodeURIComponent(trChartSvg(k,pts,D))+'"></div>'});
+  const pages=[];for(let i=0;i<cards.length;i+=8)pages.push(head+'<div class="cg">'+cards.slice(i,i+8).join("")+'</div>');
+  const stamp=dmy(isoToday())+" "+nowHM()+" · "+title;
+  return pages.map((h,i)=>'<div class="rp trp">'+h+'<div class="pf"><span>'+esc(stamp)+'</span><span>Page '+(i+1)+' of '+pages.length+'</span></div></div>');
+}
+let trY=0;
+function trShowPrev(pages){trY=window.scrollY;const b=$("#trPrevBody");b.innerHTML="<style>"+RPT_CSS+TR_CSS+".trp-sc{max-width:100%;overflow-x:auto}.trp-sc .trp{border:1px solid #c9d1d3;box-shadow:0 1px 4px rgba(0,0,0,.08)}</style>"+pages.map(h=>'<div class="trp-sc">'+h+'</div>').join("");
+  $("#trPrev").hidden=false;$("#trendBody").hidden=true;$("#trPrev").scrollIntoView({block:"start",behavior:"smooth"})}
+function trHidePrev(){$("#trPrev").hidden=true;$("#trPrevBody").textContent="";$("#trendBody").hidden=false;window.scrollTo({top:trY,behavior:"smooth"})}
+$("#trBack").addEventListener("click",trHidePrev);
+$("#t_range").addEventListener("change",()=>{if(!$("#trPrev").hidden)trHidePrev()});
+$("#trPdf").addEventListener("click",async()=>{const msg=$("#trMsg"),btn=$("#trPdf");
+  if(!downloads){msg.className="msg err";msg.textContent="Downloads aren't available in this view.";return}
+  const D=TRP;if(!D){msg.className="msg err";msg.textContent="Choose a valid period first.";return}
+  if(!D.rows.length){msg.className="msg err";msg.textContent="There are no readings in this period.";return}
+  btn.disabled=true;msg.className="msg";msg.textContent="Creating PDF…";
+  try{const{h2c,jsPDF}=await getPdfLibs();const doc=new jsPDF({orientation:"portrait",unit:"pt",format:"a4",compress:true});
+    const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();const pages=trPdfPages(D);
+    for(let i=0;i<pages.length;i++){const box=document.createElement("div");box.style.cssText="position:fixed;left:-12000px;top:0;width:794px;background:#ffffff;color:#111111;z-index:-1";
+      box.innerHTML="<style>"+RPT_CSS+TR_CSS+"</style>"+pages[i];document.body.appendChild(box);
+      try{const imgs=[...box.querySelectorAll("img")];await Promise.all(imgs.map(im=>im.complete?0:new Promise(z=>{im.onload=im.onerror=z})));
+        const cv=await h2c(box,{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false,width:794,windowWidth:840});
+        if(i)doc.addPage();const k=Math.min(pw/cv.width,ph/cv.height);doc.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",(pw-cv.width*k)/2,0,cv.width*k,cv.height*k,undefined,"FAST")}
+      finally{box.remove()}}
+    trShowPrev(pages);
+    const file="IETS-Trends-"+dmy(D.s0)+"-to-"+dmy(D.e0)+".pdf";doc.setProperties({title:"IETS Trends "+dmy(D.s0)+" to "+dmy(D.e0),creator:"IETS and Water Meter Daily Log",author:"Lam Soon Edible Oils Sdn. Bhd."});
+    msg.textContent="Saving PDF…";await downloads.save({filename:file,data:doc.output("blob")});msg.className="msg good";msg.textContent="PDF saved: "+file}
+  catch(e){if(e&&e.code==="declined"){msg.className="msg";msg.textContent="Download cancelled."}else{msg.className="msg err";msg.textContent=e&&e.code?"Couldn't save the PDF ("+e.code+").":pdfErr(e)}}
+  finally{btn.disabled=false}});
+
+/* ---------- camera photo -> CSV ---------- */
+let camCtl=null,camSample=null,camRows=null,camUrl=null;
+async function getSample(){return null}
+async function camStart(){
+  const m=$("#camMsg");const s=await getSample();
+  let ok=false;if(s){try{const L=await s.limits();ok=!!(L&&L.images)}catch(e){}}
+  if(!ok){$("#camPanel").hidden=false;$("#camTitle").textContent="Camera reading not available";$("#camSub").textContent="";m.className="msg err";m.textContent="Reading photos needs this page open in Claude with image access allowed. You can still type the readings or import a CSV.";camButtons("closed");return}
+  $("#camFile").value="";$("#camFile").click();
+}
+function camButtons(st){$("#camLoad").hidden=st!=="done";$("#camDl").hidden=st!=="done"||!downloads;$("#camRetake").hidden=st==="busy";$("#camStop").hidden=st!=="busy";$("#camClose").hidden=st==="busy";$("#camCsvBox").hidden=st!=="done"}
+function camPrompt(){
+  const cols=P.filter(p=>!p.calc).map(p=>"- "+p.k+": "+GROUPS.find(g=>g.id===p.g).name+" "+p.label+(p.unit&&p.unit!=="visual"?" ("+p.unit+")":"")+(p.opts?" — one of: "+p.opts.join(" | "):" — number")).join("\n");
+  return "You are reading a photo taken at the Integrated Effluent Treatment System (IETS) of a factory in Malaysia. The photo may show a handwritten or printed daily log sheet (one or many days), a lab report, or a single meter/instrument display.\n\n"+
+  "Extract every reading you can see and map it to these fields:\n"+cols+"\n- date: sampling date as dd-mm-yyyy (if only dd-mm-yy is shown, use 20yy)\n- time: HH:MM if shown\n- recordedBy: name of the person if shown\n- remarks: any short note written for that day\n- inv_note: plant status note on inventory sheets, e.g. \"Plan Not Running - Sunday Off\"\n- chem_chk: name/initials of the engineer who checked the chemical sheet (\"Signed\" if only a signature)\nInventory sheets: k15/k1500/k160 = COD 15000/1500/160 mg/L testing kits (In, Out, Balance in pcs); c = Coagulant jars, p = Polymer-Anion (In kg, Out grams e.g. 100g -> 100, Balance kg), l = Lime bags. A dash (-, –, —) or an empty cell means NO reading: return null for that field, never 0.\n\n"+
+  "Rules: one object per date. Use null for anything not visible — never guess a number. Copy numbers exactly as written (no units). fdm_read = IETS final discharge volume for that day in m\u00b3 (small daily number, e.g. 5). pond_open = retention pond 7am, pond_close = 7pm: if the sheet gives VOLUME in m\u00b3 instead of level in m, divide the volume by 16.269 to get the level. The incoming water meter is read at 7am. EQ tank water input reading is also a cumulative m³ meter value (separate from the incoming water meter). Incoming water meter reading is the cumulative m³ meter value. Retention pond levels are in metres. If no date is visible, use today: "+dmy(isoToday())+". "+
+  "Colour: map clear/clean to Clean, turbid/cloudy/dark to Cloudy. Oil & grease spot: map none/no/nil to None.\n\n"+
+  'Reply with only JSON in this shape: {"rows":[{"date":"05-10-2026","time":null,"recordedBy":null,"inf_cod":1234,"...":null,"remarks":null}],"note":"one short sentence on anything unclear or unreadable"}';
+}
+async function camRun(file){
+  const s=await getSample();if(!s||!file)return;
+  if(camUrl)URL.revokeObjectURL(camUrl);camUrl=URL.createObjectURL(file);$("#camThumb").src=camUrl;
+  $("#camPanel").hidden=false;$("#camTitle").textContent="Reading photo…";$("#camSub").textContent="Claude is reading the values in your photo and converting them to CSV. This can take up to a minute.";
+  const m=$("#camMsg");m.className="msg";m.textContent="Thinking…";$("#camPreview").textContent="";camRows=null;camButtons("busy");
+  $("#camPanel").scrollIntoView({block:"nearest",behavior:"smooth"});
+  camCtl=new AbortController();
+  try{
+    const out=await s.json(camPrompt(),{images:file,signal:camCtl.signal,cache:false,onText:()=>{m.textContent="Converting to CSV…"}});
+    const raw=Array.isArray(out)?out:(out&&Array.isArray(out.rows)?out.rows:[]);
+    const rows=new Map();
+    raw.forEach(r=>{if(!r||typeof r!=="object")return;const date=parseDate(r.date)||isoToday();const b={date,time:r.time||null,recordedBy:r.recordedBy||null,remarks:r.remarks||null,inv_note:r.inv_note||null,chem_chk:r.chem_chk||null};
+      for(const p of P){if(p.calc)continue;let v=r[p.k];if(v==null||v===""||isDash(v)){b[p.k]=null;continue}
+        if(p.opts){const hit=p.opts.find(o=>o.toLowerCase()===String(v).toLowerCase());b[p.k]=hit||String(v)}else{const n=Number(String(v).replace(/,/g,""));b[p.k]=isFinite(n)?(p.int?Math.round(n):n):null}}
+      b.pond_open_vol=vol(b.pond_open);b.pond_close_vol=vol(b.pond_close);
+      if(P.some(p=>!p.calc&&b[p.k]!=null))rows.set(date,Object.assign(rows.get(date)||{},Object.fromEntries(Object.entries(b).filter(([k,v])=>v!=null||!(rows.get(date)||{})[k]))))});
+    if(!rows.size){$("#camTitle").textContent="No readings found";$("#camSub").textContent="";m.className="msg err";m.textContent="Couldn't find any IETS or water meter readings in that photo. Try a closer, well-lit photo of the log sheet or meter."+(out&&out.note?" ("+out.note+")":"");camButtons("closed");return}
+    camRows=[...rows.entries()].sort();
+    const csv=buildCsv(camRows);$("#camCsv").value=csv;
+    // preview: only columns that have values
+    const used=P.filter(p=>!p.calc&&camRows.some(([,d])=>d[p.k]!=null));
+    const t=el("table"),hr=el("tr");["Date",...used.map(p=>colName(p))].forEach(h=>hr.append(el("th",{text:h})));const th=el("thead");th.append(hr);t.append(th);const tb=el("tbody");
+    camRows.forEach(([d,b])=>{const tr=el("tr");tr.append(el("td",{text:dmy(d)}));used.forEach(p=>{const st=status(p.k,b[p.k]);tr.append(el("td",{class:st==="none"?"":st,text:fmt(p.k,b[p.k])}))});tb.append(tr)});t.append(tb);
+    $("#camPreview").textContent="";$("#camPreview").append(el("div",{class:"cam-tbl"},t));
+    $("#camTitle").textContent="CSV ready – load it into the log?";
+    $("#camSub").textContent="Converted "+camRows.length+" day"+(camRows.length>1?"s":"")+" ("+used.length+" readings per day). Check the values against the photo, then tap Load into log.";
+    m.className="msg"+(out&&out.note?"":" good");m.textContent=out&&out.note?"Note from the reader: "+out.note:"All values read from the photo.";
+    camButtons("done");$("#camLoad").focus();
+  }catch(e){
+    const c=e&&e.code;if(c==="cancelled"){$("#camPanel").hidden=true;return}
+    $("#camTitle").textContent="Couldn't read the photo";$("#camSub").textContent="";m.className="msg err";
+    m.textContent=c==="not_granted"?"Claude wasn't allowed to read photos for this page. Allow it when asked to use the camera feature.":c==="image_rejected"?"That image couldn't be used. Try another photo (JPEG or PNG).":c==="rate_limited"?"Too many requests right now. Try again in a little while.":c==="invalid_json"?"The photo was read but couldn't be turned into a table. Try a clearer photo.":c==="refused"?"Claude couldn't process this photo. Try a different photo.":c==="images_unavailable"?"Photo reading isn't available in this view.":"Something went wrong reading the photo ("+(c||"error")+"). Try again.";
+    camButtons("closed");
+  }finally{camCtl=null}
+}
+function camLoad(){
+  const text=$("#camCsv").value;if(!text.trim())return;
+  selectTab("history");$("#impPanel").hidden=false;$("#impBtn").setAttribute("aria-expanded","true");
+  buildImport(text,"photo ("+(camRows?camRows.length:0)+" day"+(camRows&&camRows.length===1?"":"s")+")");
+  $("#camPanel").hidden=true;$("#impPanel").scrollIntoView({block:"start",behavior:"smooth"});
+}
+$("#camBtn").addEventListener("click",camStart);$("#camBtn2").addEventListener("click",()=>{selectTab("entry");camStart()});
+$("#camFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(f)camRun(f)});
+$("#camStop").addEventListener("click",()=>{if(camCtl)camCtl.abort()});
+$("#camRetake").addEventListener("click",camStart);
+$("#camClose").addEventListener("click",()=>{$("#camPanel").hidden=true;camRows=null});
+$("#camLoad").addEventListener("click",camLoad);
+function applySec(){
+  {const allOpt=$("#f_sec").querySelector('option[value="all"]');if(allOpt){allOpt.hidden=isPhone();allOpt.disabled=isPhone()}
+   if(isPhone()&&$("#f_sec").value==="all")$("#f_sec").value="IETS"}
+  const v=$("#f_sec").value;
+  document.querySelectorAll("#stages > section.block").forEach(b=>{b.hidden=!(v==="all"||b.getAttribute("aria-label")===v)});
+  const n=document.querySelector("#stages [data-sec=inv]");if(n)n.hidden=!(v==="all"||v==="IETS Testing Kit Inventory"||v==="Daily Chemical Usage");
+  try{localStorage.setItem("iets_sec",v)}catch(e){}}
+$("#f_sec").addEventListener("change",applySec);
+try{const v=localStorage.getItem("iets_sec");if(v&&[...$("#f_sec").options].some(o=>o.value===v))$("#f_sec").value=v}catch(e){}
+applySec();
+$("#bkHist").addEventListener("click",async()=>{if(await saveCfg()===false){$("#csvMsg").className="msg err";$("#csvMsg").textContent="The backup folder link in System Settings isn't valid. Fix it there first.";return}runBackup($("#csvMsg"),$("#bkHist"))});
+$("#camDl").addEventListener("click",async()=>{try{await downloads.save({filename:"IETS-photo-"+isoToday()+".csv",data:$("#camCsv").value});$("#camMsg").className="msg good";$("#camMsg").textContent="CSV saved."}catch(e){if(e&&e.code!=="declined"){$("#camMsg").className="msg err";$("#camMsg").textContent="Couldn't save the CSV ("+(e.code||"error")+")."}}});
+
+/* ---------- init ---------- */
+buildForm();applySec();renderLimits();
+$("#f_date").value=isoToday();
+fillForm(isoToday());
+try{const b=localStorage.getItem("iets_by");if(b==="Badarudin"||b==="Bishnu"||b==="Prakash"||b==="Admin")$("#f_by").value=b}catch(e){}
+$("#f_date").addEventListener("change",e=>{const keepBy=$("#f_by").value;fillForm(e.target.value);if(!$("#f_by").value)setBy(keepBy)});
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>selectTab(b.dataset.tab)));
+$("#saveBtn").addEventListener("click",save);
+function setVM(m,save){document.body.classList.toggle("vm-mobile",m==="m");document.body.classList.toggle("vm-pc",m==="p");
+  [["vmM","m"],["vmP","p"]].forEach(([id,v])=>{const b=$("#"+id);b.classList.toggle("on",m===v);b.setAttribute("aria-pressed",String(m===v))});
+  if(typeof applySec==="function"&&$("#f_sec"))applySec();
+  if(save){try{localStorage.setItem("iets_vm",m)}catch(e){}
+    let t=null;try{t=localStorage.getItem("iets_tab_"+m)}catch(e){}if(t==="settings")t=null;selectTab(t||(m==="m"?"dash":"entry"));window.scrollTo(0,0)}
+  else if(!$("#pane-trends").hidden)renderTrends()}
+{let m=null;try{m=localStorage.getItem("iets_vm")}catch(e){}setVM(m==="m"||m==="p"?m:(innerWidth<700?"m":"p"),false)}
+$("#vmM").addEventListener("click",()=>setVM("m",true));$("#vmP").addEventListener("click",()=>setVM("p",true));
+$("#netBtn").addEventListener("click",()=>{if(db&&db.refresh&&!dbOk)db.refresh();netDetail=!netDetail;$("#connState").textContent=netDetail?$("#netBtn").title:""});
+window.addEventListener("online",updateNet);window.addEventListener("offline",updateNet);
+updateNet();
+setInterval(()=>{const d=LOGS.get($("#f_date").value);if(!d||!d.time)$("#f_time").value=nowHM()},20000);
+$("#clearBtn").addEventListener("click",()=>{P.forEach(p=>{if(!p.calc)$("#f_"+p.k).value=""});$("#f_time").value=(LOGS.get($("#f_date").value)||{}).time||nowHM();$("#f_rem").value="";$("#f_note").value="";$("#f_chk").value="";dirty=false;refreshPills();$("#saveMsg").textContent=""});
+$("#h_month").addEventListener("change",renderHistory);
+$("#t_range").addEventListener("change",()=>{const c=$("#t_range").value==="custom";$("#t_fromF").hidden=$("#t_toF").hidden=!c;
+  if(c&&!$("#t_to").value){const t=new Date();$("#t_to").value=dmy(isoToday()).replace(/-/g,"/");t.setDate(t.getDate()-29);$("#t_from").value=pad(t.getDate())+"/"+pad(t.getMonth()+1)+"/"+t.getFullYear()}
+  renderTrends()});
+$("#t_from").addEventListener("change",renderTrends);$("#t_to").addEventListener("change",renderTrends);
+$("#csvBtn").addEventListener("click",exportCsv);
+document.querySelectorAll(".subtabs button").forEach(b=>b.addEventListener("click",()=>setHistSub(b.dataset.sub)));
+$("#bkSheet").value=DEFAULT_SHEET;showSheetLink();
+$("#bkSheet").addEventListener("input",showSheetLink);
+$("#bkSheet").addEventListener("change",async()=>{const ok=await saveCfg();const m=$("#syncMsg");if(ok==="sheet"){m.className="msg err";m.textContent="That doesn't look like a Google Sheet link. It should contain /spreadsheets/d/ followed by the sheet ID."}else if(ok===false){m.className="msg err";m.textContent="Check the Drive folder link below."}else{m.className="msg good";m.textContent="Google Sheet link saved. The next sync writes into this sheet.";scheduleCatchUp()}});
+try{const f=localStorage.getItem("iets_bkfolder");if(f)$("#bkFolder").value=f}catch(e){}
+$("#syncNow").addEventListener("click",async()=>{const m=$("#syncMsg");m.className="msg";m.textContent="";if(!LOGS.size){m.textContent="There are no records to sync yet.";return}{const r=await saveCfg();if(r!==true){m.className="msg err";m.textContent=r==="sheet"?"Check the Google Sheet link first.":"Check the folder link first.";return}}$("#syncNow").disabled=true;await autoBackup(null,null,$("#f_by").value||"Admin",m,true);$("#syncNow").disabled=false});
+$("#bkGo").addEventListener("click",async()=>{await saveCfg();runBackup()});
+$("#bkFolder").addEventListener("change",async()=>{const ok=await saveCfg();if(ok===false){$("#syncMsg").className="msg err";$("#syncMsg").textContent="That doesn't look like a Google Drive folder link. It should contain /folders/ followed by the folder ID."}else{$("#syncMsg").className="msg good";$("#syncMsg").textContent="Folder saved."}});
+$("#bkAuto").addEventListener("change",async()=>{await saveCfg();$("#syncMsg").className="msg";$("#syncMsg").textContent=$("#bkAuto").checked?"Automatic sync is on.":"Automatic sync is off."});
+$("#impBtn").addEventListener("click",()=>{const p=$("#impPanel");p.hidden=!p.hidden;$("#impBtn").setAttribute("aria-expanded",String(!p.hidden));if(p.hidden){resetImport();$("#impMsg").textContent=""}});
+$("#impFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];const keep=f;loadFromFile(keep)});
+$("#impLoad").addEventListener("click",loadFromLink);
+$("#impAll").addEventListener("click",()=>runImport(true));
+$("#impNew").addEventListener("click",()=>runImport(false));
+$("#impCancel").addEventListener("click",()=>{resetImport();$("#impMsg").textContent=""});
+$("#limSave").addEventListener("click",saveLimits);
+renderMonthSelect();renderStrip();
+{let t=null;try{t=localStorage.getItem("iets_tab_"+(isPhone()?"m":"p"))}catch(e){}if(t==="settings")t=null;selectTab(t||(isPhone()?"dash":"entry"))}
+document.querySelectorAll("#bnav button,#moreSheet button").forEach(b=>b.addEventListener("click",()=>{const g=b.dataset.go;
+  if(g==="more"){$("#entrySheet").hidden=true;const sh=$("#moreSheet");sh.hidden=!sh.hidden;b.setAttribute("aria-expanded",String(!sh.hidden));return}
+  if(g==="entry"&&isPhone()&&b.closest("#bnav")){$("#moreSheet").hidden=true;const es=$("#entrySheet");es.hidden=!es.hidden;b.setAttribute("aria-expanded",String(!es.hidden));
+    es.querySelectorAll("[data-sec]").forEach(x=>x.classList.toggle("on",x.dataset.sec===$("#f_sec").value));return}
+  if(g==="entry"&&$("#pane-entry").hidden){$("#f_date").value=isoToday();fillForm(isoToday())}
+  selectTab(g);window.scrollTo(0,0)}));
+document.addEventListener("click",e=>{const sh=$("#moreSheet");if(!sh.hidden&&!e.target.closest("#moreSheet")&&!e.target.closest('[data-go="more"]'))sh.hidden=true;
+  const es=$("#entrySheet");if(!es.hidden&&!e.target.closest("#entrySheet")&&!e.target.closest('#bnav [data-go="entry"]')){es.hidden=true;$('#bnav [data-go="entry"]').setAttribute("aria-expanded","false")}});
+document.querySelectorAll("#entrySheet [data-sec]").forEach(x=>x.addEventListener("click",()=>{
+  if($("#pane-entry").hidden){$("#f_date").value=isoToday();fillForm(isoToday())}
+  $("#f_sec").value=x.dataset.sec;applySec();$("#entrySheet").hidden=true;$('#bnav [data-go="entry"]').setAttribute("aria-expanded","false");selectTab("entry");window.scrollTo(0,0)}));
+
+(async()=>{
+  downloads=fileDownloads;
+  try{if(window.supabase&&window.supabase.createClient)sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}catch(e){sb=null}
+  fillLimits();
+  db=makeSbDb(sb);
+  if(!sb){$("#connState").textContent=db.hasCache()?"Showing readings saved on this device. The database couldn't be reached.":"The database couldn't be reached. Check the internet connection and reload.";}
+  else $("#connState").textContent="";
+  async function applyAuth(session){
+    me=session&&session.user||null;canWrite=false;canAdmin=false;
+    if(me&&sb){try{const{data}=await sb.from("editors").select("role").eq("email",String(me.email||"").toLowerCase()).maybeSingle();if(data){canWrite=true;canAdmin=data.role==="owner"}}catch(e){}}
+    $("#authWho").textContent=me?(me.email+(canWrite?(canAdmin?" · owner":" · recorder"):" · view only")):"";
+    $("#authBtn").textContent=me?"Sign out":"Sign in";
+    $("#saveBtn").disabled=!canWrite;
+    $("#saveMsg").className="msg";$("#saveMsg").textContent=canWrite?"":(me?"Your email isn't approved to record readings. Ask the owner to add it.":"View only. Sign in (top right) to save readings.");
+    fillLimits();renderAll();
+  }
+  if(sb){
+    sb.auth.onAuthStateChange((_ev,session)=>{setTimeout(()=>applyAuth(session),0)});
+    try{const{data}=await sb.auth.getSession();await applyAuth(data&&data.session)}catch(e){await applyAuth(null)}
+  }else await applyAuth(null);
+  $("#authBtn").addEventListener("click",async()=>{if(me){try{await sb.auth.signOut()}catch(e){}await applyAuth(null);return}const p=$("#authPanel");p.hidden=!p.hidden;if(!p.hidden)$("#authEmail").focus()});
+  $("#authClose").addEventListener("click",()=>{$("#authPanel").hidden=true});
+  $("#authSend").addEventListener("click",async()=>{const em=$("#authEmail").value.trim(),m=$("#authMsg");
+    if(!/^\S+@\S+\.\S+$/.test(em)){m.className="msg err";m.textContent="Enter a valid email address.";return}
+    if(!sb){m.className="msg err";m.textContent="The database couldn't be reached.";return}
+    $("#authSend").disabled=true;m.className="msg";m.textContent="Sending…";
+    const{error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+    $("#authSend").disabled=false;
+    if(error){m.className="msg err";m.textContent="Couldn't send the link ("+(error.message||error.code)+")."}
+    else{m.className="msg good";m.textContent="Check your email and tap the sign-in link. Open it on this device and in this browser."}});
+  db.doc("settings/limits").onSnapshot(s=>{
+    if(s.exists){const d=s.data();LIM=Object.assign(defaultLimits(),JSON.parse(JSON.stringify(d)));}else LIM=defaultLimits();
+    fillLimits();renderAll();
+  },()=>{});
+  db.collection("calib").onSnapshot(snap=>{const m=new Map();snap.docs.forEach(d=>{if(d.exists)m.set(d.id,{...d.data()})});CAL=m;if(!$("#pane-calib").hidden)renderCalib();if(!$("#pane-dash").hidden)renderDash()},()=>{});
+  db.collection("logs").orderBy("date","desc").limit(1000).onSnapshot(snap=>{
+    dbOk=!!(sb&&db.isLoaded());updateNet();if(dbOk)$("#connState").textContent="";
+    const m=new Map();snap.docs.forEach(d=>{if(d.exists)m.set(d.id,d.data())});LOGS=m;renderAll();logsLoaded=true;
+  },e=>{dbOk=false;updateNet();$("#connState").textContent=sheetErr(e,"load the log")+" Tap Online/Offline to retry."});
+})();
+})();
+</script>
+</body>
+</html>
