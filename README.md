@@ -45,7 +45,7 @@ It is safe to run again: it won't create duplicates.
 
 In Supabase: **Authentication → URL Configuration**
 
-- **Site URL:** `https://<your-github-username>.github.io/iets-log/`
+- **Site URL:** `[https://<your-github-username>.github.io/iets-log/](https://ngaukk.github.io/IETS-Daily-Monitoring-System-Log/)`
 - **Redirect URLs:** add the same address → **Save**
 
 Without this step, the email sign-in link won't return people to the log.
