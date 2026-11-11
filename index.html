@@ -1685,6 +1685,8 @@ const RPT_CSS=`.rp{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:1
 .rp td.note{font-style:italic;text-align:left;padding-left:12px}.rp .red{color:#c00;font-weight:700}
 .rp .ttl{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:2px solid #111;padding:4px 0 6px;margin:2px 0 8px;font-size:15px;font-weight:700;letter-spacing:.02em}.rp .ttl span:last-child{font-size:12px;font-weight:400}
 .rp table.chem{table-layout:fixed;min-width:900px}.rp table.wtr{min-width:520px;max-width:760px}.rp table.wtr td{height:24px;font-size:12px}
+.rp table.iets{min-width:980px}.rp table.iets th{font-size:10.5px;line-height:1.2;padding:3px 4px}.rp table.iets td{height:20px;font-size:11px;padding:2px 4px}.rp table.iets td.l,.rp table.iets th.l{text-align:left;white-space:nowrap}
+.rp .rp-foot2{margin-top:28px;display:grid;grid-template-columns:max-content 260px max-content 260px;justify-content:start;align-items:end;gap:12px 14px;font-size:12px}
 .rp .rp-foot{margin-top:28px;display:grid;grid-template-columns:max-content 300px;justify-content:start;align-items:end;gap:22px 12px;font-size:12px}.rp .ln{border-bottom:1px solid #333;height:34px}`;
 function rptDays(m){const[y,mo]=m.split("-").map(Number);const n=new Date(y,mo,0).getDate();return Array.from({length:n},(_,i)=>m+"-"+String(i+1).padStart(2,"0"))}
 function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -1697,18 +1699,20 @@ function buildReport(type,m){
   const TITLES={water:"IETS WATER MONITORING DAILY RECORD",kit:"IETS TESTING KIT INVENTORY",chem:"IETS CHEMICAL INVENTORY"};
   h+='<div class="ttl"><span>'+TITLES[type]+'</span><span>Month: <b>'+esc(mon)+'</b></span></div>';
   if(type==="water"){
-    const vcell=(v,dec,cls)=>'<td'+(cls?' class="'+cls+'"':"")+'>'+(v==null||v===""?"":esc(Number(v).toLocaleString("en-GB",{minimumFractionDigits:0,maximumFractionDigits:dec})))+'</td>';
-    h+='<table class="wtr"><tr><th rowspan="2" style="width:22%">Date</th><th rowspan="2">IETS final discharge<br>(m3)</th><th colspan="2">Retention pond volume (m3)</th><th>Incoming water<br>meter (m3)</th><th rowspan="2">Water input to<br>EQ tank (m3)</th></tr><tr><th>7am</th><th>7pm</th><th>7am</th></tr>';
-    let tf=0,nf=0,te=0,ne=0;
+    const KS=["inf_cod","inf_ph","inf_flow","clr_cod","clr_tss","aer_sv30","aer_ph","fd_cod","fd_tss","fd_color","fd_og","fd_ph","fd_flow"];
+    const cell=k=>d=>{const v=d?d[k]:null;if(v==null||v==="")return"<td></td>";
+      if(k==="fd_color")return"<td>"+esc(v)+"</td>";
+      if(k==="fd_og")return"<td"+(v==="Yes"?' class="red"':"")+">"+esc(v==="None"?"No":v)+"</td>";
+      const st=status(k,v);return"<td"+(st==="bad"?' class="red"':"")+">"+esc(fmt(k,v))+"</td>"};
+    h+='<table class="iets"><tr><th rowspan="2" class="l">Date</th><th colspan="3">Influent</th><th colspan="2">Clarifier</th><th colspan="2">Aeration Tank</th><th colspan="6">Final Discharge</th></tr>'+
+      '<tr><th>COD<br>(mg/l)</th><th>pH</th><th>Influent<br>Flowrate<br>(m3/d)</th><th>COD<br>(mg/l)</th><th>TSS<br>(mg/l)</th><th>SV30</th><th>pH</th><th>COD<br>(mg/l)</th><th>TSS<br>(mg/l)</th><th>Color<br>(visual)<br>Clean/Cloudy</th><th>Oil &amp; grease<br>spot (visual)<br>No/Yes</th><th>pH</th><th>Discharge<br>Flowrate<br>(m3/d)</th></tr>';
     for(const dt of days){const d=LOGS.get(dt);
-      const has=d&&["fdm_read","pond_open","pond_close","wm_read","pond_open_vol","pond_close_vol","eq_read"].some(k=>d[k]!=null&&d[k]!=="");
-      h+='<tr><td>'+dmy(dt)+'</td>';
-      if(d&&!has&&d.inv_note){h+='<td class="note" colspan="5">'+esc(d.inv_note)+'</td></tr>';continue}
-      const ov=d?(d.pond_open_vol!=null?d.pond_open_vol:vol(d.pond_open)):null,cv=d?(d.pond_close_vol!=null?d.pond_close_vol:vol(d.pond_close)):null;
-      if(d&&d.fdm_read!=null){tf+=+d.fdm_read;nf++}
-      if(d&&d.eq_read!=null){te+=+d.eq_read;ne++}
-      h+=vcell(d&&d.fdm_read,2)+vcell(ov,2,ov!=null&&ov>vol(0.59)+1e-9?"red":"")+vcell(cv,2,cv!=null&&cv>vol(0.59)+1e-9?"red":"")+vcell(d&&d.wm_read,2)+vcell(d&&d.eq_read,2)+'</tr>'}
-    h+='<tr><th>Total / month</th><th>'+(nf?Number(tf.toLocaleString?tf:tf).toLocaleString("en-GB",{maximumFractionDigits:2}):"")+'</th><th colspan="2" class="l" style="font-weight:400">Pond capacity '+vol(0.59).toFixed(2)+' m3 (0.59 m)</th><th></th><th>'+(ne?te.toLocaleString("en-GB",{maximumFractionDigits:2}):"")+'</th></tr></table>';
+      const has=d&&KS.some(k=>d[k]!=null&&d[k]!=="");
+      h+='<tr><td class="l">'+dmy(dt)+'</td>';
+      const note=d&&(d.remarks||d.inv_note);
+      if(d&&!has&&note){h+='<td class="note" colspan="13">'+esc(note)+'</td></tr>';continue}
+      h+=KS.map(k=>cell(k)(d)).join("")+'</tr>'}
+    h+='</table>';
   }else if(type==="kit"){
     const kits=[["k15","COD 15000 mg/l"],["k1500","COD 1500 mg/l"],["k160","COD 160 mg/l"]];
     h+='<table><tr><td>Monthly Usage</td>'+kits.map(()=>'<td colspan="3">Monthly usage 30pcs</td>').join("")+'<th rowspan="5">Technician<br>(Sign)</th></tr>';
@@ -1736,7 +1740,7 @@ function buildReport(type,m){
       h+='<td>'+(d&&(has||d.inv_note)?esc(d.recordedBy||""):"")+'</td></tr>'}
     h+='</table>';
   }
-  h+='<div class="rp-foot"><span>Verified By :</span><span class="ln"></span><span>Name :</span><span class="ln"></span><span>Date :</span><span class="ln"></span></div>';
+  h+=type==="water"?'<div class="rp-foot2"><span>Done by :</span><span class="ln"></span><span>Verified by :</span><span class="ln"></span></div>':'<div class="rp-foot"><span>Verified By :</span><span class="ln"></span><span>Name :</span><span class="ln"></span><span>Date :</span><span class="ln"></span></div>';
   h+='<div style="margin-top:8px;font-size:9px;color:#666">'+dmy(isoToday())+' '+nowHM()+' · '+TITLES[type]+'</div></div>';
   return h;
 }
@@ -1762,13 +1766,13 @@ async function makeReportPdf(){
   const r=reportDoc();const{h2c,jsPDF}=await getPdfLibs();
   const box=document.createElement("div");box.className="pdfbox";
   box.style.cssText="position:fixed;left:-12000px;top:0;width:max-content;min-width:794px;background:#ffffff;color:#111111;padding:0;z-index:-1";
-  box.innerHTML="<style>"+RPT_CSS+".pdfbox .rp table{min-width:0!important;max-width:none!important}.pdfbox .rp table.wtr{width:100%}.pdfbox .rp table.chem{width:1000px}</style>"+buildReport(r.t,r.m);
+  box.innerHTML="<style>"+RPT_CSS+".pdfbox .rp table{min-width:0!important;max-width:none!important}.pdfbox .rp table.wtr{width:100%}.pdfbox .rp table.iets{width:1080px}.pdfbox .rp table.chem{width:1000px}</style>"+buildReport(r.t,r.m);
   document.body.appendChild(box);
   try{
     const imgs=[...box.querySelectorAll("img")];await Promise.all(imgs.map(i=>i.complete?0:new Promise(z=>{i.onload=i.onerror=z})));
     const bw=Math.max(794,Math.ceil(box.scrollWidth));box.style.width=bw+"px";
     const cv=await h2c(box,{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false,width:bw,windowWidth:bw+40});
-    const doc=new jsPDF({orientation:"portrait",unit:"pt",format:"a4",compress:true});
+    const doc=new jsPDF({orientation:r.t==="water"?"landscape":"portrait",unit:"pt",format:"a4",compress:true});
     const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=28;
     const k=Math.min((pw-2*m)/cv.width,(ph-2*m)/cv.height);const w=cv.width*k,h=cv.height*k;
     doc.addImage(cv.toDataURL("image/jpeg",0.9),"JPEG",(pw-w)/2,m,w,h,undefined,"FAST");
